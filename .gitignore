@@ -1,0 +1,16 @@
+# Build & Output Directories
+build/
+target/
+.gradle/
+*.class
+
+# IDE & Editor caches
+.idea/
+*.iml
+.vscode/
+*.log
+
+# OS generated files
+Thumbs.db
+Desktop.ini
+.DS_Store

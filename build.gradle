@@ -1,0 +1,65 @@
+plugins {
+    id "java"
+    id "architectury-plugin" version "3.4-SNAPSHOT" apply false
+    id "dev.architectury.loom" version "1.6-SNAPSHOT" apply false
+}
+
+allprojects {
+    group = "com.hyperion"
+    version = "1.0.0"
+
+    apply plugin: "java"
+
+    repositories {
+        mavenCentral()
+        maven { url = "https://maven.fabricmc.net/" }
+        maven { url = "https://maven.architectury.dev/" }
+    }
+}
+
+// Version-specific Java target bytecode compatibility
+project(":common") {
+    tasks.withType(JavaCompile).configureEach {
+        options.encoding = "UTF-8"
+        options.release = 8 // Maximum backwards-compatibility across all MC versions
+    }
+}
+
+project(":fabric-1.16.5") { tasks.withType(JavaCompile).configureEach { options.release = 8 } }
+project(":forge-1.16.5")  { tasks.withType(JavaCompile).configureEach { options.release = 8 } }
+
+project(":fabric-1.17.1") { tasks.withType(JavaCompile).configureEach { options.release = 16 } }
+project(":forge-1.17.1")  { tasks.withType(JavaCompile).configureEach { options.release = 16 } }
+
+project(":fabric-1.18.2") { tasks.withType(JavaCompile).configureEach { options.release = 17 } }
+project(":forge-1.18.2")  { tasks.withType(JavaCompile).configureEach { options.release = 17 } }
+
+project(":fabric-1.19.2") { tasks.withType(JavaCompile).configureEach { options.release = 17 } }
+project(":forge-1.19.2")  { tasks.withType(JavaCompile).configureEach { options.release = 17 } }
+
+project(":fabric-1.19.4") { tasks.withType(JavaCompile).configureEach { options.release = 17 } }
+project(":forge-1.19.4")  { tasks.withType(JavaCompile).configureEach { options.release = 17 } }
+
+project(":fabric-1.20.1") { tasks.withType(JavaCompile).configureEach { options.release = 17 } }
+project(":forge-1.20.1")  { tasks.withType(JavaCompile).configureEach { options.release = 17 } }
+
+project(":fabric-1.20.4") { tasks.withType(JavaCompile).configureEach { options.release = 17 } }
+project(":neoforge-1.20.4") { tasks.withType(JavaCompile).configureEach { options.release = 21 } }
+
+project(":fabric-1.20.6") { tasks.withType(JavaCompile).configureEach { options.release = 21 } }
+project(":neoforge-1.20.6") { tasks.withType(JavaCompile).configureEach { options.release = 21 } }
+
+project(":fabric-1.21.1") { tasks.withType(JavaCompile).configureEach { options.release = 21 } }
+project(":neoforge-1.21.1") { tasks.withType(JavaCompile).configureEach { options.release = 21 } }
+
+project(":fabric-1.21.4") { tasks.withType(JavaCompile).configureEach { options.release = 21 } }
+project(":neoforge-1.21.4") { tasks.withType(JavaCompile).configureEach { options.release = 21 } }
+
+project(":fabric-1.21.11") { tasks.withType(JavaCompile).configureEach { options.release = 21 } }
+project(":neoforge-1.21.11") { tasks.withType(JavaCompile).configureEach { options.release = 21 } }
+
+project(":fabric-26.1") { tasks.withType(JavaCompile).configureEach { options.release = 21 } }
+project(":neoforge-26.1") { tasks.withType(JavaCompile).configureEach { options.release = 21 } }
+
+project(":fabric-26.2") { tasks.withType(JavaCompile).configureEach { options.release = 21 } }
+project(":neoforge-26.2") { tasks.withType(JavaCompile).configureEach { options.release = 21 } }

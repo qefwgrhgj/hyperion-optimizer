@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 1,
+  "id": "hyperion",
+  "version": "1.0.0",
+  "name": "Hyperion Optimizer",
+  "description": "High-Performance Cross-Platform Minecraft Optimization Engine.",
+  "authors": [
+    "Hyperion Team"
+  ],
+  "license": "LGPL-3.0-only",
+  "environment": "*",
+  "entrypoints": {
+    "main": [
+      "com.hyperion.optimizer.fabric.HyperionFabric12111"
+    ]
+  },
+  "mixins": [
+    "hyperion.mixins.json"
+  ],
+  "depends": {
+    "fabricloader": ">=0.16.0",
+    "minecraft": "1.21.11",
+    "java": ">=21"
+  }
+}

@@ -1,0 +1,27 @@
+{
+  "required": false,
+  "minVersion": "0.8",
+  "package": "com.hyperion.optimizer.mixin",
+  "compatibilityLevel": "JAVA_8",
+  "mixins": [
+    "MixinExplosion",
+    "MixinRedstoneWireBlock",
+    "MixinHopperBlockEntity",
+    "MixinPathNavigation",
+    "MixinExperienceOrbEntity"
+  ],
+  "client": [
+    "MixinVideoOptionsScreen",
+    "MixinLevelRenderer",
+    "MixinInGameHud",
+    "MixinLivingEntityRenderer",
+    "MixinBlockEntityRenderDispatcher",
+    "MixinSoundEngine",
+    "MixinClientPlayNetworkHandler",
+    "MixinParticleManager",
+    "MixinLightmapTexture"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}

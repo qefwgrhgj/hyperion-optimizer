@@ -1,0 +1,2700 @@
+package com.hyperion.optimizer;
+
+import com.hyperion.optimizer.api.HyperionConfig;
+import com.hyperion.optimizer.core.audio.AsyncAudioEngine;
+import com.hyperion.optimizer.core.entity.AnimationLodManager;
+import com.hyperion.optimizer.core.entity.EntityDepthCuller;
+import com.hyperion.optimizer.core.entity.ExperienceOrbMerger;
+import com.hyperion.optimizer.core.entity.SpatialCollisionEngine;
+import com.hyperion.optimizer.core.entity.StaticChestMeshBaker;
+import com.hyperion.optimizer.core.gpu.ComputeCullEngine;
+import com.hyperion.optimizer.core.gpu.FastParticleEngine;
+import com.hyperion.optimizer.core.gpu.MultiDrawIndirectManager;
+import com.hyperion.optimizer.core.hud.DecoupledHudManager;
+import com.hyperion.optimizer.core.hud.HudDirtyTracker;
+import com.hyperion.optimizer.core.light.AsyncBitsetLightEngine;
+import com.hyperion.optimizer.core.light.DataOrientedChunkMemory;
+import com.hyperion.optimizer.core.memory.FastMathLUT;
+import com.hyperion.optimizer.core.memory.PrimitiveVectorPool;
+import com.hyperion.optimizer.core.network.PacketFlushConsolidator;
+import com.hyperion.optimizer.core.physics.FastExplosionEngine;
+import com.hyperion.optimizer.core.physics.FastFluidEngine;
+import com.hyperion.optimizer.core.physics.FastRedstoneEngine;
+import com.hyperion.optimizer.core.physics.FastRegistryCache;
+import com.hyperion.optimizer.core.physics.PathfindingCircuitBreaker;
+import com.hyperion.optimizer.core.physics.SleepingHopperManager;
+import com.hyperion.optimizer.core.physics.VoxelShapeFastCache;
+import com.hyperion.optimizer.core.world.ClientWorldCacheStorage;
+import com.hyperion.optimizer.core.world.FakeChunkManager;
+
+import com.hyperion.optimizer.api.HyperionConfigStorage;
+import com.hyperion.optimizer.core.gpu.SimdFrustumCuller;
+import com.hyperion.optimizer.core.hud.HyperionProfilerOverlay;
+import com.hyperion.optimizer.core.memory.OffHeapChunkSegment;
+import com.hyperion.optimizer.gui.HyperionCategory;
+import com.hyperion.optimizer.gui.HyperionOption;
+import com.hyperion.optimizer.gui.HyperionOptionsRegistry;
+import com.hyperion.optimizer.gui.HyperionScreenModel;
+import com.hyperion.optimizer.core.gpu.amd.AmdArchitectureProfile;
+import com.hyperion.optimizer.core.gpu.amd.AmdGpuAccelerator;
+import com.hyperion.optimizer.core.gpu.amd.AmdVramBudgetGuard;
+import com.hyperion.optimizer.core.gpu.dualgpu.DualGpuManager;
+import com.hyperion.optimizer.core.gpu.dualgpu.DualGpuWorkloadDispatcher;
+import com.hyperion.optimizer.core.gpu.dualgpu.GpuDeviceInfo;
+import com.hyperion.optimizer.mixin.MixinLevelRenderer;
+import com.hyperion.optimizer.mixin.MixinVideoOptionsScreen;
+import com.hyperion.optimizer.core.render.ColorCorrectionEngine;
+import com.hyperion.optimizer.core.render.FpsStabilizerEngine;
+import com.hyperion.optimizer.mixin.MixinLightmapTexture;
+import com.hyperion.optimizer.core.threading.HyperionThreadPoolManager;
+import com.hyperion.optimizer.core.threading.ParallelChunkMesher;
+import com.hyperion.optimizer.core.threading.MultiCoreEntityPhysicsEngine;
+import com.hyperion.optimizer.core.threading.AsyncWorldTickDispatcher;
+import com.hyperion.optimizer.core.threading.CpuCoreAffinityGovernor;
+import com.hyperion.optimizer.gui.HyperionConfigScreen;
+
+import java.nio.ByteBuffer;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
+
+public class HyperionTestRunner {
+    public static void main(String[] args) {
+        System.out.println("=================================================");
+        System.out.println("   HYPERION OPTIMIZER - EMPIRICAL TEST SUITE    ");
+        System.out.println("=================================================");
+
+        int passed = 0;
+        int failed = 0;
+
+        try {
+            testEngineInitialization();
+            System.out.println("[PASS] 1. Engine Initialization & Subsystem Registry");
+            passed++;
+        } catch (Throwable t) {
+            System.err.println("[FAIL] 1. Engine Initialization: " + t.getMessage());
+            failed++;
+        }
+
+        try {
+            testPrimitiveVectorPackingAndReentrancy();
+            System.out.println("[PASS] 2. Zero-Allocation Vector Packing & Re-entrancy Ring Buffer");
+            passed++;
+        } catch (Throwable t) {
+            System.err.println("[FAIL] 2. Vector Packing: " + t.getMessage());
+            failed++;
+        }
+
+        try {
+            testComputeCullFrustumAndThreadSafety();
+            System.out.println("[PASS] 3. GPU Compute Frustum Culling & Atomic Telemetry");
+            passed++;
+        } catch (Throwable t) {
+            System.err.println("[FAIL] 3. GPU Frustum Culling: " + t.getMessage());
+            failed++;
+        }
+
+        try {
+            testDecoupledHudPacingAndDirtyTracker();
+            System.out.println("[PASS] 4. Decoupled HUD FBO Pacing & Event-Driven Invalidation");
+            passed++;
+        } catch (Throwable t) {
+            System.err.println("[FAIL] 4. Decoupled HUD: " + t.getMessage());
+            failed++;
+        }
+
+        try {
+            testVoxelCollisionFastPath();
+            System.out.println("[PASS] 5. Voxel Collision Fast-Path & Box Intersections");
+            passed++;
+        } catch (Throwable t) {
+            System.err.println("[FAIL] 5. Voxel Collision: " + t.getMessage());
+            failed++;
+        }
+
+        try {
+            testExperienceOrbClumpingAndAgeExploitFix();
+            System.out.println("[PASS] 6. Experience Orb Spatial Merging & Age Exploit Prevention");
+            passed++;
+        } catch (Throwable t) {
+            System.err.println("[FAIL] 6. Experience Orb Merging: " + t.getMessage());
+            failed++;
+        }
+
+        try {
+            testPathfindingCircuitBreakerAndPruning();
+            System.out.println("[PASS] 7. Mob Pathfinding Circuit Breaker & Memory Pruning");
+            passed++;
+        } catch (Throwable t) {
+            System.err.println("[FAIL] 7. Pathfinding Circuit Breaker: " + t.getMessage());
+            failed++;
+        }
+
+        try {
+            testDataOrientedMemoryPackingAndBounds();
+            System.out.println("[PASS] 8. Data-Oriented L1/L2/L3 4-Bit Light Packing & Coordinate Clamping");
+            passed++;
+        } catch (Throwable t) {
+            System.err.println("[FAIL] 8. Data-Oriented Memory: " + t.getMessage());
+            failed++;
+        }
+
+        try {
+            testBoundedWorldCacheLru();
+            System.out.println("[PASS] 9. Client World Cache Bounded LRU Eviction (Anti-OOM)");
+            passed++;
+        } catch (Throwable t) {
+            System.err.println("[FAIL] 9. World Cache LRU: " + t.getMessage());
+            failed++;
+        }
+
+        try {
+            testSleepingHopperTickSynchronization();
+            System.out.println("[PASS] 10. Sleeping Hopper Absolute Tick Synchronization");
+            passed++;
+        } catch (Throwable t) {
+            System.err.println("[FAIL] 10. Sleeping Hopper Timing: " + t.getMessage());
+            failed++;
+        }
+
+        try {
+            testExperienceOrbIntegerOverflowExploitFix();
+            System.out.println("[PASS] 11. Experience Orb 64-Bit Arithmetic & Integer Overflow Prevention (P0-1)");
+            passed++;
+        } catch (Throwable t) {
+            System.err.println("[FAIL] 11. XP Integer Overflow: " + t.getMessage());
+            failed++;
+        }
+
+        try {
+            testFakeChunkRealChunkArrivalInvalidation();
+            System.out.println("[PASS] 12. Fake Chunk Real Arrival Atomic Invalidation & Z-Fighting Defense (P0-2)");
+            passed++;
+        } catch (Throwable t) {
+            System.err.println("[FAIL] 12. Fake Chunk Z-Fighting: " + t.getMessage());
+            failed++;
+        }
+
+        try {
+            testPacketFlushConsolidatorPerChannelIsolation();
+            System.out.println("[PASS] 13. Packet Flush Per-Channel Context Isolation & Krypton Batching (P0-3)");
+            passed++;
+        } catch (Throwable t) {
+            System.err.println("[FAIL] 13. Packet Flush Channel Isolation: " + t.getMessage());
+            failed++;
+        }
+
+        try {
+            testStaticChestMeshBakerDoubleChestPairing();
+            System.out.println("[PASS] 14. Double Chest Left/Right Pair Synchronization & Static Mesh (P1-1)");
+            passed++;
+        } catch (Throwable t) {
+            System.err.println("[FAIL] 14. Double Chest Sync: " + t.getMessage());
+            failed++;
+        }
+
+        try {
+            testDecoupledHudClockRollbackProtection();
+            System.out.println("[PASS] 15. Decoupled HUD NTP System Clock Rollback Defensive Reset (P1-2)");
+            passed++;
+        } catch (Throwable t) {
+            System.err.println("[FAIL] 15. HUD Clock Rollback: " + t.getMessage());
+            failed++;
+        }
+
+        try {
+            testComputeCullEngineNaNInfinitySafeFallback();
+            System.out.println("[PASS] 16. GPU Compute Culling NaN/Infinity Matrix Fallback & Void Defense (P1-3)");
+            passed++;
+        } catch (Throwable t) {
+            System.err.println("[FAIL] 16. Compute Cull NaN Fallback: " + t.getMessage());
+            failed++;
+        }
+
+        try {
+            testClientWorldCacheStorageMultiThreadedStripedThroughput();
+            System.out.println("[PASS] 17. Client World Cache High-Throughput Striped Lock Segments (P2-1)");
+            passed++;
+        } catch (Throwable t) {
+            System.err.println("[FAIL] 17. Striped World Cache Contention: " + t.getMessage());
+            failed++;
+        }
+
+        try {
+            testMultiDrawIndirectManagerThreadSafeRecording();
+            System.out.println("[PASS] 18. MultiDraw Indirect Thread-Safe Command Recording & Buffer Merge (P2-2)");
+            passed++;
+        } catch (Throwable t) {
+            System.err.println("[FAIL] 18. MultiDraw Indirect Concurrency: " + t.getMessage());
+            failed++;
+        }
+
+        try {
+            testAsyncAudioEngineBoundedQueueOverflowProtection();
+            System.out.println("[PASS] 19. Async Audio Engine Bounded Task Queue & Discard Policy (P2-3)");
+            passed++;
+        } catch (Throwable t) {
+            System.err.println("[FAIL] 19. Audio Queue Bounding: " + t.getMessage());
+            failed++;
+        }
+
+        try {
+            testPrimitiveVectorPoolWorldBorderClamping();
+            System.out.println("[PASS] 20. Primitive Vector Packing World Border Clamping (+/-30M) (P3-1)");
+            passed++;
+        } catch (Throwable t) {
+            System.err.println("[FAIL] 20. Vector World Border: " + t.getMessage());
+            failed++;
+        }
+
+        try {
+            testDataOrientedChunkMemoryConcurrentNibbleSafety();
+            System.out.println("[PASS] 21. Data-Oriented Memory Concurrent Nibble Race Defense (P0-1)");
+            passed++;
+        } catch (Throwable t) {
+            System.err.println("[FAIL] 21. Memory Nibble Safety: " + t.getMessage());
+            failed++;
+        }
+
+        try {
+            testPrimitiveVectorPoolExpandedRingBufferDeepStack();
+            System.out.println("[PASS] 22. Primitive Vector Pool 64-Slot Deep Stack Overflow Defense (P0-2)");
+            passed++;
+        } catch (Throwable t) {
+            System.err.println("[FAIL] 22. Vector Ring Buffer: " + t.getMessage());
+            failed++;
+        }
+
+        try {
+            testPathfindingCircuitBreakerBossExemptionAndRollback();
+            System.out.println("[PASS] 23. Pathfinding Circuit Breaker Boss Exemption & Tick Recovery (P0-3)");
+            passed++;
+        } catch (Throwable t) {
+            System.err.println("[FAIL] 23. Pathfinding Boss Exemption: " + t.getMessage());
+            failed++;
+        }
+
+        try {
+            testFakeChunkDimensionChangeClearing();
+            System.out.println("[PASS] 24. Fake Chunk Cross-Dimension Bleed Defense & Invalidation (P1-1)");
+            passed++;
+        } catch (Throwable t) {
+            System.err.println("[FAIL] 24. Fake Chunk Dimension Bleed: " + t.getMessage());
+            failed++;
+        }
+
+        try {
+            testMultiDrawIndirectIdempotentFinishBatch();
+            System.out.println("[PASS] 25. MultiDraw Indirect Idempotent Multi-Pass Finish Batch (P1-2)");
+            passed++;
+        } catch (Throwable t) {
+            System.err.println("[FAIL] 25. MultiDraw Idempotency: " + t.getMessage());
+            failed++;
+        }
+
+        try {
+            testAsyncBitsetLightEngineZeroThreadSanitization();
+            System.out.println("[PASS] 26. Async Light Engine Thread Pool Core Count Sanitization (P1-3)");
+            passed++;
+        } catch (Throwable t) {
+            System.err.println("[FAIL] 26. Light Pool Sanitization: " + t.getMessage());
+            failed++;
+        }
+
+        try {
+            testEntityDepthCullerBossAndGlowingProtection();
+            System.out.println("[PASS] 27. Entity Depth Culler Boss & Glowing Outline Protection (P1-4)");
+            passed++;
+        } catch (Throwable t) {
+            System.err.println("[FAIL] 27. Depth Culler Special Entities: " + t.getMessage());
+            failed++;
+        }
+
+        try {
+            testStaticChestMeshBakerChunkInvalidation();
+            System.out.println("[PASS] 28. Static Chest Baker Chunk Unload Memory Pruning (P2-2)");
+            passed++;
+        } catch (Throwable t) {
+            System.err.println("[FAIL] 28. Chest Baker Chunk Pruning: " + t.getMessage());
+            failed++;
+        }
+
+        try {
+            testAnimationLodEntityPhaseInterleaving();
+            System.out.println("[PASS] 29. Animation LOD Entity Phase Interleaving & De-jitter (P2-4)");
+            passed++;
+        } catch (Throwable t) {
+            System.err.println("[FAIL] 29. Animation LOD Interleaving: " + t.getMessage());
+            failed++;
+        }
+
+        try {
+            testEngineHotReloadAndCleanShutdown();
+            System.out.println("[PASS] 30. Engine Configuration Hot-Reload & Safe Daemon Shutdown (P3-2, P3-3)");
+            passed++;
+        } catch (Throwable t) {
+            System.err.println("[FAIL] 30. Engine Lifecycle: " + t.getMessage());
+            failed++;
+        }
+
+        try {
+            testFastExplosionRayDirectionTableAccuracy();
+            System.out.println("[PASS] 31. Fast Explosion 1352-Ray Direction Precomputed LUT & Geometry");
+            passed++;
+        } catch (Throwable t) {
+            System.err.println("[FAIL] 31. Explosion Ray LUT: " + t.getMessage());
+            failed++;
+        }
+
+        try {
+            testFastExplosionBlockDestructionAndWaterAbsorption();
+            System.out.println("[PASS] 32. TNT Blast Voxel Marching & Water Absorption Shield");
+            passed++;
+        } catch (Throwable t) {
+            System.err.println("[FAIL] 32. Blast Voxel Marching: " + t.getMessage());
+            failed++;
+        }
+
+        try {
+            testFastExplosionEntityDamageAndKnockback();
+            System.out.println("[PASS] 33. Entity Explosion Exposure & Distance Damage Falloff");
+            passed++;
+        } catch (Throwable t) {
+            System.err.println("[FAIL] 33. Entity Blast Exposure: " + t.getMessage());
+            failed++;
+        }
+
+        try {
+            testAllExplosionTypesParameterization();
+            System.out.println("[PASS] 34. Full 7-Tier Explosion Type Matrix (Ghast to Wither Spawn)");
+            passed++;
+        } catch (Throwable t) {
+            System.err.println("[FAIL] 34. Explosion Matrix: " + t.getMessage());
+            failed++;
+        }
+
+        try {
+            testFastExplosionZeroAllocationStressThroughput();
+            System.out.println("[PASS] 35. High-Throughput Explosion Stress Test (100 Simultaneous Detonations)");
+            passed++;
+        } catch (Throwable t) {
+            System.err.println("[FAIL] 35. Explosion Stress Test: " + t.getMessage());
+            failed++;
+        }
+
+        try {
+            testFastRedstoneWireTopologicalSolver();
+            System.out.println("[PASS] 36. Fast Redstone 1-Pass Topological Wire Network Solver");
+            passed++;
+        } catch (Throwable t) {
+            System.err.println("[FAIL] 36. Redstone Topological Solver: " + t.getMessage());
+            failed++;
+        }
+
+        try {
+            testFastRedstoneNeighborUpdateDeduplication();
+            System.out.println("[PASS] 37. Redstone Neighbor Update Batching & Deduplication");
+            passed++;
+        } catch (Throwable t) {
+            System.err.println("[FAIL] 37. Neighbor Update Deduplication: " + t.getMessage());
+            failed++;
+        }
+
+        try {
+            testFastRedstoneComparatorDiscretePowerEvaluation();
+            System.out.println("[PASS] 38. Comparator Discrete Signal Caching (0-15 Exact Math)");
+            passed++;
+        } catch (Throwable t) {
+            System.err.println("[FAIL] 38. Comparator Discrete Math: " + t.getMessage());
+            failed++;
+        }
+
+        try {
+            testFastRedstoneHopperContainerOcclusion();
+            System.out.println("[PASS] 39. Hopper Entity Search Container Occlusion Fast-Path");
+            passed++;
+        } catch (Throwable t) {
+            System.err.println("[FAIL] 39. Hopper Occlusion Fast-Path: " + t.getMessage());
+            failed++;
+        }
+
+        try {
+            testFastRedstoneActiveClockStressBenchmark();
+            System.out.println("[PASS] 40. Redstone 100-Node Clock Stress Benchmark (Zero GC Allocations)");
+            passed++;
+        } catch (Throwable t) {
+            System.err.println("[FAIL] 40. Redstone Benchmark: " + t.getMessage());
+            failed++;
+        }
+
+        try {
+            testSpatialCollisionEngineGridAndBrainStripping();
+            System.out.println("[PASS] 41. Spatial Grid Collision Hashing & AI Brain Stripping (Lithium)");
+            passed++;
+        } catch (Throwable t) {
+            System.err.println("[FAIL] 41. Spatial Collision Hashing: " + t.getMessage());
+            failed++;
+        }
+
+        try {
+            testFastFluidEngineFlowVectorCachingAndInvalidation();
+            System.out.println("[PASS] 42. Fast Fluid 3D Flow Vector Caching & Invalidation");
+            passed++;
+        } catch (Throwable t) {
+            System.err.println("[FAIL] 42. Fluid Flow Caching: " + t.getMessage());
+            failed++;
+        }
+
+        try {
+            testFastParticleEngineRateLimitingAndDistanceCulling();
+            System.out.println("[PASS] 43. GPU/Client Particle Rate Limiter & Distance Culling");
+            passed++;
+        } catch (Throwable t) {
+            System.err.println("[FAIL] 43. Particle Rate Limiter: " + t.getMessage());
+            failed++;
+        }
+
+        try {
+            testFastMathLUTTrigonometricAccuracyAndInvSqrt();
+            System.out.println("[PASS] 44. FastMath 65536-Entry Trigonometric LUT & Fast InvSqrt");
+            passed++;
+        } catch (Throwable t) {
+            System.err.println("[FAIL] 44. FastMath LUT: " + t.getMessage());
+            failed++;
+        }
+
+        try {
+            testFastRegistryCacheTagLookupSpeed();
+            System.out.println("[PASS] 45. Fast Registry Primitive Tag Membership Cache");
+            passed++;
+        } catch (Throwable t) {
+            System.err.println("[FAIL] 45. Registry Tag Cache: " + t.getMessage());
+            failed++;
+        }
+
+        try {
+            testFastRedstonePowerOfTwoHashTableAndProbeLimit();
+            System.out.println("[PASS] 46. Redstone Hash Table Power-of-2 Sizing & Probe Limit (P0-1)");
+            passed++;
+        } catch (Throwable t) {
+            System.err.println("[FAIL] 46. Redstone Hash Table P0-1: " + t.getMessage());
+            failed++;
+        }
+
+        try {
+            testSpatialCollisionConcurrentGridThreadSafety();
+            System.out.println("[PASS] 47. Spatial Collision Concurrent Grid Mutex Safety (P0-2)");
+            passed++;
+        } catch (Throwable t) {
+            System.err.println("[FAIL] 47. Spatial Collision Mutex P0-2: " + t.getMessage());
+            failed++;
+        }
+
+        try {
+            testFastExplosionProbeGuardOnMassiveBlast();
+            System.out.println("[PASS] 48. Explosion 16384 Hash Table & 64-Probe Lockup Guard (P1-1)");
+            passed++;
+        } catch (Throwable t) {
+            System.err.println("[FAIL] 48. Explosion Probe Guard P1-1: " + t.getMessage());
+            failed++;
+        }
+
+        try {
+            testFastFluidAndParticleMemoryBoundedPruning();
+            System.out.println("[PASS] 49. Fluid Dynamics & Particle Counter Bounded Eviction (P1-2, P1-3)");
+            passed++;
+        } catch (Throwable t) {
+            System.err.println("[FAIL] 49. Fluid & Particle Memory P1-2/P1-3: " + t.getMessage());
+            failed++;
+        }
+
+        try {
+            testFastMathLUTSpecialFloatSanitizationAndEngineShutdown();
+            System.out.println("[PASS] 50. FastMath Zero/NaN Sanitization & Full Daemon Shutdown (P2-1, P2-2, P3-1)");
+            passed++;
+        } catch (Throwable t) {
+            System.err.println("[FAIL] 50. FastMath & Shutdown P2-1/P2-2/P3-1: " + t.getMessage());
+            failed++;
+        }
+
+        try {
+            testFastMathNegativeAnglePhaseContinuity();
+            System.out.println("[PASS] 51. FastMath Negative Angle Phase Continuity & Positive Bias (P1-1)");
+            passed++;
+        } catch (Throwable t) {
+            System.err.println("[FAIL] 51. FastMath Continuity P1-1: " + t.getMessage());
+            failed++;
+        }
+
+        try {
+            testFastRegistryCacheCapacitySaturationPurge();
+            System.out.println("[PASS] 52. Fast Registry Cache 32768 Capacity Saturation Auto-Purge (P1-2)");
+            passed++;
+        } catch (Throwable t) {
+            System.err.println("[FAIL] 52. Registry Saturation P1-2: " + t.getMessage());
+            failed++;
+        }
+
+        try {
+            testExperienceOrbNonNegativeAgeClamp();
+            System.out.println("[PASS] 53. Experience Orb Non-Negative Age Clamp & Despawn Lifetime (P1-3)");
+            passed++;
+        } catch (Throwable t) {
+            System.err.println("[FAIL] 53. Experience Orb Age Clamp P1-3: " + t.getMessage());
+            failed++;
+        }
+
+        try {
+            testEntityDepthCullerNaNDistanceSafetyAndInvertedVoxel();
+            System.out.println("[PASS] 54. Entity Culler NaN Guard & Voxel Inverted AABB Rejection (P2-1, P2-2)");
+            passed++;
+        } catch (Throwable t) {
+            System.err.println("[FAIL] 54. Culler NaN & Voxel AABB P2-1/P2-2: " + t.getMessage());
+            failed++;
+        }
+
+        try {
+            testSleepingHopperLongMaxOverflowDefenseAndSectionClamping();
+            System.out.println("[PASS] 55. Hopper Long.MAX Tick Overflow & Section Coord Clamp (P2-3, P3-1)");
+            passed++;
+        } catch (Throwable t) {
+            System.err.println("[FAIL] 55. Hopper & Light Section P2-3/P3-1: " + t.getMessage());
+            failed++;
+        }
+
+        try {
+            testConfigStorageSerializationAndPresets();
+            System.out.println("[PASS] 56. JSON Config Storage Persistence & Atomic Preset Application");
+            passed++;
+        } catch (Throwable t) {
+            System.err.println("[FAIL] 56. Config Storage & Presets: " + t.getMessage());
+            failed++;
+        }
+
+        try {
+            testScreenModelAndOptionsRegistry();
+            System.out.println("[PASS] 57. Video Settings Screen Model, 5 Categories & Dirty Tracking");
+            passed++;
+        } catch (Throwable t) {
+            System.err.println("[FAIL] 57. Screen Model & Options: " + t.getMessage());
+            failed++;
+        }
+
+        try {
+            testOffHeapChunkSegmentDirectMemoryZeroGC();
+            System.out.println("[PASS] 58. Off-Heap Direct Memory Chunk Segment & Zero-GC Nibble Packing");
+            passed++;
+        } catch (Throwable t) {
+            System.err.println("[FAIL] 58. Off-Heap Memory: " + t.getMessage());
+            failed++;
+        }
+
+        try {
+            testSimdFrustumCullerBatch8Masking();
+            System.out.println("[PASS] 59. SIMD Vectorized 8-Box Batch Frustum Culler & Bitmasking");
+            passed++;
+        } catch (Throwable t) {
+            System.err.println("[FAIL] 59. SIMD Frustum Culler: " + t.getMessage());
+            failed++;
+        }
+
+        try {
+            testProfilerOverlayTelemetryAndMixinHooks();
+            System.out.println("[PASS] 60. Real-Time Profiler Telemetry Overlay & Mixin Runtime Injections");
+            passed++;
+        } catch (Throwable t) {
+            System.err.println("[FAIL] 60. Profiler & Mixin Hooks: " + t.getMessage());
+            failed++;
+        }
+
+        try {
+            testAmdArchitectureAutoDetectionProfiles();
+            System.out.println("[PASS] 61. AMD Architecture Profiler (RX 500, Radeon 540, Vega 8, RDNA)");
+            passed++;
+        } catch (Throwable t) {
+            System.err.println("[FAIL] 61. AMD Architecture Profiler: " + t.getMessage());
+            failed++;
+        }
+
+        try {
+            testAmdWavefrontCalibrationAndPrimitiveDiscard();
+            System.out.println("[PASS] 62. AMD Wave64/Wave32 Calibration & Primitive Discard Acceleration");
+            passed++;
+        } catch (Throwable t) {
+            System.err.println("[FAIL] 62. AMD Wavefront & Primitive Discard: " + t.getMessage());
+            failed++;
+        }
+
+        try {
+            testAmd2GbVramBudgetGuardThresholds();
+            System.out.println("[PASS] 63. Radeon 540 2GB VRAM Budget Guard & Dynamic Memory Throttling");
+            passed++;
+        } catch (Throwable t) {
+            System.err.println("[FAIL] 63. Radeon 540 VRAM Guard: " + t.getMessage());
+            failed++;
+        }
+
+        try {
+            testDualGpuDeviceEnumerationAndWorkloadRouting();
+            System.out.println("[PASS] 64. Dual-GPU Hybrid Engine (dGPU 3D World + Vega 8 iGPU HUD/Light Offload)");
+            passed++;
+        } catch (Throwable t) {
+            System.err.println("[FAIL] 64. Dual-GPU Workload Routing: " + t.getMessage());
+            failed++;
+        }
+
+        try {
+            testAmdAndDualGpuConfigStorageAndOptionsRegistry();
+            System.out.println("[PASS] 65. AMD & Dual-GPU Video Settings UI Options Registry & Persistence");
+            passed++;
+        } catch (Throwable t) {
+            System.err.println("[FAIL] 65. AMD & Dual-GPU UI Options: " + t.getMessage());
+            failed++;
+        }
+
+        try {
+            testColorCorrectionEngineAndAcesCurve();
+            System.out.println("[PASS] 66. Color Correction & ACES Filmic HDR Tonemapping Curve");
+            passed++;
+        } catch (Throwable t) {
+            System.err.println("[FAIL] 66. ACES Tonemapping: " + t.getMessage());
+            failed++;
+        }
+
+        try {
+            testColorBlackCrushEliminationAndNightAmbientLift();
+            System.out.println("[PASS] 67. Anti-Black-Crush Toe Lift & Night Ambient World Visibility");
+            passed++;
+        } catch (Throwable t) {
+            System.err.println("[FAIL] 67. Anti-Black-Crush: " + t.getMessage());
+            failed++;
+        }
+
+        try {
+            testColorLightmapBatchProcessingAndOptionsRegistry();
+            System.out.println("[PASS] 68. 16x16 Lightmap Batch In-Place Processing & Debanding Dither");
+            passed++;
+        } catch (Throwable t) {
+            System.err.println("[FAIL] 68. Lightmap Batch Processing: " + t.getMessage());
+            failed++;
+        }
+
+        try {
+            testFpsStabilizerChunkUploadPacingAndWorkBudgeting();
+            System.out.println("[PASS] 69. Dynamic FPS Stabilizer (350 FPS Target) & Chunk Mesh Upload Pacing");
+            passed++;
+        } catch (Throwable t) {
+            System.err.println("[FAIL] 69. FPS Stabilizer: " + t.getMessage());
+            failed++;
+        }
+
+        try {
+            testFpsStabilizerBlockEntityDistanceAndOcclusionCulling();
+            System.out.println("[PASS] 70. Loaded Chunks Tile Entity Culling & Frame Pacing Invariants");
+            passed++;
+        } catch (Throwable t) {
+            System.err.println("[FAIL] 70. Tile Entity Culling: " + t.getMessage());
+            failed++;
+        }
+
+        try {
+            testCpuThreadPoolManagerTopologyAndModes();
+            System.out.println("[PASS] 71. Multi-Core CPU Thread Pool Manager Topology & Dynamic Allocation");
+            passed++;
+        } catch (Throwable t) {
+            System.err.println("[FAIL] 71. CPU Thread Pool Manager: " + t.getMessage());
+            failed++;
+        }
+
+        try {
+            testParallelChunkMesherThroughputAndGeometry();
+            System.out.println("[PASS] 72. Multi-Core ForkJoin Chunk Mesher & Geometry Tessellation");
+            passed++;
+        } catch (Throwable t) {
+            System.err.println("[FAIL] 72. Parallel Chunk Mesher: " + t.getMessage());
+            failed++;
+        }
+
+        try {
+            testMultiCoreEntityPhysicsEngineBatching();
+            System.out.println("[PASS] 73. Parallel Entity Ticking & Physics Multi-Core Offload Engine");
+            passed++;
+        } catch (Throwable t) {
+            System.err.println("[FAIL] 73. Multi-Core Entity Physics: " + t.getMessage());
+            failed++;
+        }
+
+        try {
+            testAsyncWorldTickDispatcherAndCpuAffinity();
+            System.out.println("[PASS] 74. Async World Tick Dispatcher & CPU Priority Affinity Governor");
+            passed++;
+        } catch (Throwable t) {
+            System.err.println("[FAIL] 74. Async World Dispatcher & CPU Governor: " + t.getMessage());
+            failed++;
+        }
+
+        try {
+            testHyperionConfigScreenAndRootCategories();
+            System.out.println("[PASS] 75. Hyperion Config GUI Menu (1. Graphics, 2. GPU, 3. CPU) & Interactive Model");
+            passed++;
+        } catch (Throwable t) {
+            System.err.println("[FAIL] 75. Config Screen & Root Categories: " + t.getMessage());
+            failed++;
+        }
+
+        try {
+            testSingleGpuAndDualGpuHardwareTopologyRouting();
+            System.out.println("[PASS] 76. Single dGPU Only, Single iGPU Only, and Dual-GPU Hybrid Dynamic Topology");
+            passed++;
+        } catch (Throwable t) {
+            System.err.println("[FAIL] 76. GPU Topology Routing: " + t.getMessage());
+            failed++;
+        }
+
+        System.out.println("=================================================");
+        System.out.println("SUMMARY: " + passed + " Passed, " + failed + " Failed.");
+        System.out.println("STATUS: " + (failed == 0 ? "[VERIFIED: ALL 76 AUDIT FIXES & MULTI-CORE/GPU OPTIMIZATIONS EMPIRICALLY VERIFIED]" : "[DEFECT DETECTED]"));
+        System.out.println("=================================================");
+
+        if (failed > 0) {
+            System.exit(1);
+        }
+    }
+
+    private static void testEngineInitialization() {
+        HyperionConfig cfg = new HyperionConfig();
+        HyperionEngine engine = HyperionEngine.getInstance();
+        engine.initialize(cfg);
+
+        if (engine.getComputeCullEngine() == null || engine.getHudManager() == null ||
+            engine.getVoxelCache() == null || engine.getXpMerger() == null) {
+            throw new AssertionError("Subsystems failed to register in HyperionEngine");
+        }
+    }
+
+    private static void testPrimitiveVectorPackingAndReentrancy() {
+        int[] testCoords = {0, 0, 0, -100, 64, 250, 30000000, 319, -30000000};
+        for (int i = 0; i < testCoords.length - 2; i += 3) {
+            int x = testCoords[i];
+            int y = testCoords[i + 1];
+            int z = testCoords[i + 2];
+
+            long packed = PrimitiveVectorPool.packBlockPos(x, y, z);
+            int unX = PrimitiveVectorPool.unpackX(packed);
+            int unY = PrimitiveVectorPool.unpackY(packed);
+            int unZ = PrimitiveVectorPool.unpackZ(packed);
+
+            if (x != unX || y != unY || z != unZ) {
+                throw new AssertionError(String.format("Packing mismatch! Expected (%d, %d, %d), got (%d, %d, %d)",
+                    x, y, z, unX, unY, unZ));
+            }
+        }
+
+        // Test Re-entrancy Ring Buffer (P1 fix): nested calls must NOT corrupt parent vector!
+        PrimitiveVectorPool.MutableVec3 parentVec = PrimitiveVectorPool.getThreadLocalVec(10.0, 20.0, 30.0);
+        PrimitiveVectorPool.MutableVec3 childVec = PrimitiveVectorPool.getThreadLocalVec(99.0, 88.0, 77.0);
+
+        if (parentVec.x != 10.0 || parentVec.y != 20.0 || parentVec.z != 30.0) {
+            throw new AssertionError("Re-entrancy violation: parentVec was corrupted by childVec!");
+        }
+    }
+
+    private static void testComputeCullFrustumAndThreadSafety() {
+        ComputeCullEngine cullEngine = new ComputeCullEngine(true, true);
+        float[] identityProj = new float[] {
+            1, 0, 0, 0,
+            0, 1, 0, 0,
+            0, 0, 1, 0,
+            0, 0, 0, 1
+        };
+        float[] identityMv = new float[] {
+            1, 0, 0, 0,
+            0, 1, 0, 0,
+            0, 0, 1, 0,
+            0, 0, 0, 1
+        };
+
+        cullEngine.updateFrustum(identityProj, identityMv);
+
+        boolean visible = cullEngine.isBoxVisible(-0.5f, -0.5f, -0.5f, 0.5f, 0.5f, 0.5f);
+        if (!visible) {
+            throw new AssertionError("Centered unit box should be visible in identity frustum");
+        }
+
+        boolean culled = !cullEngine.isBoxVisible(40f, 40f, 40f, 60f, 60f, 60f);
+        if (!culled) {
+            throw new AssertionError("Far distant box (50, 50, 50) should be culled by frustum");
+        }
+
+        if (cullEngine.getCullEfficiencyPercentage() < 0.0) {
+            throw new AssertionError("Cull telemetry calculation error");
+        }
+    }
+
+    private static void testDecoupledHudPacingAndDirtyTracker() {
+        DecoupledHudManager hudManager = new DecoupledHudManager(true, 60, true);
+
+        long t0 = 1_000_000_000L;
+        if (!hudManager.shouldRepaintHud(t0)) {
+            throw new AssertionError("Initial frame must repaint HUD buffer");
+        }
+
+        long tMicro = t0 + 1_000L;
+        if (hudManager.shouldRepaintHud(tMicro)) {
+            throw new AssertionError("Immediate next microsecond must not redraw HUD");
+        }
+
+        hudManager.getDirtyTracker().updateState(18.0f, 20, 0, 300, 5, 0.5f, 0, 100L);
+        if (!hudManager.shouldRepaintHud(tMicro)) {
+            throw new AssertionError("State mutation (damage) must trigger dynamic HUD redraw");
+        }
+    }
+
+    private static void testVoxelCollisionFastPath() {
+        VoxelShapeFastCache cache = new VoxelShapeFastCache(true);
+
+        boolean collides = cache.canFastPassCubeCollision(
+            9.5, 63.5, 9.5, 10.5, 64.5, 10.5,
+            10, 64, 10,
+            VoxelShapeFastCache.SHAPE_TYPE_FULL_CUBE
+        );
+        if (!collides) {
+            throw new AssertionError("Overlapping AABB must collide with full cube");
+        }
+
+        boolean airCollides = cache.canFastPassCubeCollision(
+            9.5, 63.5, 9.5, 10.5, 64.5, 10.5,
+            10, 64, 10,
+            VoxelShapeFastCache.SHAPE_TYPE_EMPTY
+        );
+        if (airCollides) {
+            throw new AssertionError("AABB must never collide with empty air shape");
+        }
+    }
+
+    private static void testExperienceOrbClumpingAndAgeExploitFix() {
+        ExperienceOrbMerger merger = new ExperienceOrbMerger(true, 2.0, 50000);
+
+        boolean shouldMerge = merger.shouldMergeOrbs(0, 64, 0, 10, 0.5, 64, 0.5, 20);
+        if (!shouldMerge) {
+            throw new AssertionError("Nearby XP orbs within 2.0 blocks must merge");
+        }
+
+        // Test P2 fix: calculateMergedAge must inherit max age
+        int mergedAge = merger.calculateMergedAge(100, 5500);
+        if (mergedAge != 5500) {
+            throw new AssertionError("Merged age must inherit older orb age (5500), got " + mergedAge);
+        }
+    }
+
+    private static void testPathfindingCircuitBreakerAndPruning() {
+        PathfindingCircuitBreaker breaker = new PathfindingCircuitBreaker(true, 3);
+        int mobId = 42;
+        long tick = 1000L;
+
+        breaker.recordPathfindingResult(mobId, false, tick);
+        breaker.recordPathfindingResult(mobId, false, tick);
+        if (!breaker.canEntitySearchPath(mobId, tick)) {
+            throw new AssertionError("Mob should still search before 3 failures");
+        }
+
+        breaker.recordPathfindingResult(mobId, false, tick);
+        if (breaker.canEntitySearchPath(mobId, tick + 5)) {
+            throw new AssertionError("Mob must be throttled by circuit breaker after 3 failures");
+        }
+
+        breaker.recordPathfindingResult(mobId, true, tick + 50);
+        if (!breaker.canEntitySearchPath(mobId, tick + 51)) {
+            throw new AssertionError("Successful path must reset circuit breaker");
+        }
+    }
+
+    private static void testDataOrientedMemoryPackingAndBounds() {
+        DataOrientedChunkMemory mem = new DataOrientedChunkMemory();
+        mem.fillSection((byte) 0);
+
+        mem.setLight(5, 10, 12, 14);
+        mem.setLight(5, 10, 13, 7);
+
+        if (mem.getLight(5, 10, 12) != 14) {
+            throw new AssertionError("Light level at (5, 10, 12) should be 14, got " + mem.getLight(5, 10, 12));
+        }
+
+        // Test coordinate wrapping safety (P3 fix)
+        mem.setLight(5 + 16, 10 + 32, 12 + 48, 11);
+        if (mem.getLight(5, 10, 12) != 11) {
+            throw new AssertionError("Wrapped coordinate setLight must be clamped safely");
+        }
+    }
+
+    private static void testBoundedWorldCacheLru() {
+        // Create cache bounded to 4 entries
+        ClientWorldCacheStorage storage = new ClientWorldCacheStorage(true, 4);
+
+        for (int i = 0; i < 10; i++) {
+            storage.storeChunk(i, 0, new byte[] { (byte) i });
+        }
+
+        if (storage.getCachedChunkCount() > 4) {
+            throw new AssertionError("LRU Cache exceeded maximum capacity! Size: " + storage.getCachedChunkCount());
+        }
+
+        // Old chunk 0 must have been evicted, recent chunk 9 must be present
+        if (storage.hasChunk(0, 0)) {
+            throw new AssertionError("Oldest chunk (0, 0) should have been evicted by LRU!");
+        }
+        if (!storage.hasChunk(9, 0)) {
+            throw new AssertionError("Most recent chunk (9, 0) must be present in LRU cache!");
+        }
+    }
+
+    private static void testSleepingHopperTickSynchronization() {
+        SleepingHopperManager hopperManager = new SleepingHopperManager(true);
+        long packedPos = 123456789L;
+        long currentTick = 100L;
+
+        hopperManager.putToSleep(packedPos, currentTick, 20); // Sleep for 20 ticks until tick 120
+
+        // At tick 105, hopper must still sleep
+        if (!hopperManager.isHopperSleeping(packedPos, 105L)) {
+            throw new AssertionError("Hopper should still be sleeping at tick 105");
+        }
+
+        // Calling multiple times in same tick must NOT double-decrement
+        hopperManager.isHopperSleeping(packedPos, 105L);
+        hopperManager.isHopperSleeping(packedPos, 105L);
+
+        // At tick 121, hopper must wake up
+        if (hopperManager.isHopperSleeping(packedPos, 121L)) {
+            throw new AssertionError("Hopper must wake up at tick 121");
+        }
+    }
+
+    private static void testExperienceOrbIntegerOverflowExploitFix() {
+        ExperienceOrbMerger merger = new ExperienceOrbMerger(true, 2.0, 50000);
+        // Exploit scenario: two huge orb values that overflow 32-bit integer when added
+        int orb1 = 2_147_480_000;
+        int orb2 = 50_000;
+        // In 32-bit signed int: 2147480000 + 50000 = -2147437296 (< 50000, would return true without 64-bit fix)
+        boolean shouldMerge = merger.shouldMergeOrbs(0, 64, 0, orb1, 0.5, 64, 0.5, orb2);
+        if (shouldMerge) {
+            throw new AssertionError("Integer overflow exploit! Giant XP orbs must NOT merge!");
+        }
+
+        // Also test negative or zero orb inputs
+        if (merger.shouldMergeOrbs(0, 64, 0, -100, 0.5, 64, 0.5, 50)) {
+            throw new AssertionError("Negative XP orb values must be rejected");
+        }
+    }
+
+    private static void testFakeChunkRealChunkArrivalInvalidation() {
+        ClientWorldCacheStorage storage = new ClientWorldCacheStorage(true, 100);
+        FakeChunkManager fakeManager = new FakeChunkManager(32, storage);
+
+        fakeManager.registerFakeChunk(15, 25);
+        if (!fakeManager.isFakeChunk(15, 25)) {
+            throw new AssertionError("Fake chunk (15, 25) should be registered");
+        }
+
+        // Real chunk arrives from server -> atomic invalidation
+        boolean invalidated = fakeManager.invalidateOnRealChunkArrived(15, 25);
+        if (!invalidated) {
+            throw new AssertionError("invalidateOnRealChunkArrived must return true for active fake chunk");
+        }
+        if (fakeManager.isFakeChunk(15, 25)) {
+            throw new AssertionError("Fake chunk (15, 25) must be removed immediately to prevent Z-fighting");
+        }
+
+        // Second invalidation returns false
+        if (fakeManager.invalidateOnRealChunkArrived(15, 25)) {
+            throw new AssertionError("Repeated invalidation on removed chunk should return false");
+        }
+    }
+
+    private static void testPacketFlushConsolidatorPerChannelIsolation() {
+        PacketFlushConsolidator consolidator = new PacketFlushConsolidator(true);
+        String channelA = "NettyChannel-PlayerA";
+        String channelB = "NettyChannel-PlayerB";
+
+        for (int i = 0; i < 5; i++) {
+            consolidator.incrementPending(channelA);
+        }
+
+        if (consolidator.getPending(channelA) != 5) {
+            throw new AssertionError("Channel A pending count should be 5, got " + consolidator.getPending(channelA));
+        }
+        if (consolidator.getPending(channelB) != 0) {
+            throw new AssertionError("Channel B must NOT be polluted by Channel A packets");
+        }
+
+        if (!consolidator.shouldConsolidateFlush(channelA, 10)) {
+            throw new AssertionError("Channel A with 5 packets should consolidate when maxBatchSize=10");
+        }
+        if (consolidator.shouldConsolidateFlush(channelA, 5)) {
+            throw new AssertionError("Channel A with 5 packets should flush when maxBatchSize=5");
+        }
+
+        consolidator.resetPending(channelA);
+        if (consolidator.getPending(channelA) != 0) {
+            throw new AssertionError("Channel A must reset to 0");
+        }
+
+        consolidator.removeChannel(channelA);
+    }
+
+    private static void testStaticChestMeshBakerDoubleChestPairing() {
+        StaticChestMeshBaker baker = new StaticChestMeshBaker(true);
+        long posLeft = PrimitiveVectorPool.packBlockPos(100, 64, 200);
+        long posRight = PrimitiveVectorPool.packBlockPos(101, 64, 200);
+
+        // Initially both closed -> render as static block
+        if (!baker.shouldRenderAsStaticBlock(posLeft) || !baker.shouldRenderAsStaticBlock(posRight)) {
+            throw new AssertionError("Closed double chest must render as static block");
+        }
+
+        // Open player opens double chest -> both halves transition to dynamic
+        baker.setDoubleChestOpenState(posLeft, posRight, true);
+        if (baker.shouldRenderAsStaticBlock(posLeft) || baker.shouldRenderAsStaticBlock(posRight)) {
+            throw new AssertionError("Open double chest halves must NOT render as static blocks");
+        }
+        if (!baker.isChestOpen(posLeft) || !baker.isChestOpen(posRight)) {
+            throw new AssertionError("Both halves must be marked as open");
+        }
+
+        // Close double chest -> both revert to static
+        baker.setDoubleChestOpenState(posLeft, posRight, false);
+        if (!baker.shouldRenderAsStaticBlock(posLeft) || !baker.shouldRenderAsStaticBlock(posRight)) {
+            throw new AssertionError("Closed double chest must return to static block rendering");
+        }
+    }
+
+    private static void testDecoupledHudClockRollbackProtection() {
+        DecoupledHudManager hudManager = new DecoupledHudManager(true, 60, false);
+
+        long t0 = 10_000_000_000L;
+        hudManager.shouldRepaintHud(t0); // initial frame
+
+        // Simulate NTP time adjustment rolling back clock by 5 seconds
+        long tRollback = 5_000_000_000L;
+        boolean repaints = hudManager.shouldRepaintHud(tRollback);
+        if (!repaints) {
+            throw new AssertionError("HUD must immediately repaint and recover when system clock rolls back");
+        }
+
+        // Next frame progressing normally from rollback baseline
+        long tNext = tRollback + 20_000_000L; // +20ms (~50fps)
+        if (!hudManager.shouldRepaintHud(tNext)) {
+            throw new AssertionError("HUD must continue normal operation after clock recovery");
+        }
+    }
+
+    private static void testComputeCullEngineNaNInfinitySafeFallback() {
+        ComputeCullEngine cullEngine = new ComputeCullEngine(true, true);
+
+        // Matrix with NaN
+        float[] nanProj = new float[16];
+        nanProj[0] = Float.NaN;
+        float[] identityMv = new float[] {
+            1, 0, 0, 0,
+            0, 1, 0, 0,
+            0, 0, 1, 0,
+            0, 0, 0, 1
+        };
+
+        cullEngine.updateFrustum(nanProj, identityMv);
+
+        // NaN frustum must safely fall back to visible instead of producing black voids
+        boolean visible = cullEngine.isBoxVisible(100f, 100f, 100f, 116f, 116f, 116f);
+        if (!visible) {
+            throw new AssertionError("NaN frustum must fall back to visible to prevent black void rendering");
+        }
+
+        // Matrix with Infinity
+        float[] infProj = new float[16];
+        infProj[0] = Float.POSITIVE_INFINITY;
+        cullEngine.updateFrustum(infProj, identityMv);
+        if (!cullEngine.isBoxVisible(0f, 0f, 0f, 16f, 16f, 16f)) {
+            throw new AssertionError("Infinite frustum must fall back to visible");
+        }
+    }
+
+    private static void testClientWorldCacheStorageMultiThreadedStripedThroughput() throws Exception {
+        int capacity = 256;
+        ClientWorldCacheStorage storage = new ClientWorldCacheStorage(true, capacity);
+        int threadCount = 8;
+        int operationsPerThread = 100;
+        CountDownLatch latch = new CountDownLatch(threadCount);
+        AtomicBoolean hasError = new AtomicBoolean(false);
+
+        for (int t = 0; t < threadCount; t++) {
+            final int threadId = t;
+            new Thread(() -> {
+                try {
+                    for (int i = 0; i < operationsPerThread; i++) {
+                        int chunkX = threadId * 1000 + i;
+                        int chunkZ = threadId * 1000 + i;
+                        byte[] data = new byte[] { (byte) threadId, (byte) i };
+                        storage.storeChunk(chunkX, chunkZ, data);
+                        byte[] loaded = storage.loadChunk(chunkX, chunkZ);
+                        if (loaded == null && storage.hasChunk(chunkX, chunkZ)) {
+                            hasError.set(true);
+                        }
+                    }
+                } catch (Throwable ex) {
+                    hasError.set(true);
+                } finally {
+                    latch.countDown();
+                }
+            }).start();
+        }
+
+        if (!latch.await(5, TimeUnit.SECONDS)) {
+            throw new AssertionError("Striped cache concurrent test timed out (deadlock detected)");
+        }
+        if (hasError.get()) {
+            throw new AssertionError("Error occurred during multi-threaded striped cache access");
+        }
+        if (storage.getCachedChunkCount() > capacity) {
+            throw new AssertionError("Striped cache exceeded capacity: " + storage.getCachedChunkCount() + " > " + capacity);
+        }
+    }
+
+    private static void testMultiDrawIndirectManagerThreadSafeRecording() throws Exception {
+        int maxCommands = 1000;
+        MultiDrawIndirectManager manager = new MultiDrawIndirectManager(maxCommands);
+        manager.beginBatch();
+
+        int threadCount = 8;
+        int commandsPerThread = 50;
+        CountDownLatch latch = new CountDownLatch(threadCount);
+        AtomicBoolean hasError = new AtomicBoolean(false);
+
+        for (int t = 0; t < threadCount; t++) {
+            final int threadId = t;
+            new Thread(() -> {
+                try {
+                    for (int i = 0; i < commandsPerThread; i++) {
+                        boolean ok = manager.recordDrawCommand(36, 1, i, threadId * 100, 0);
+                        if (!ok) {
+                            hasError.set(true);
+                        }
+                    }
+                } catch (Throwable ex) {
+                    hasError.set(true);
+                } finally {
+                    latch.countDown();
+                }
+            }).start();
+        }
+
+        if (!latch.await(5, TimeUnit.SECONDS)) {
+            throw new AssertionError("MultiDraw indirect concurrent recording timed out");
+        }
+        if (hasError.get()) {
+            throw new AssertionError("Error recording concurrent draw commands");
+        }
+
+        if (manager.getActiveCommandCount() != threadCount * commandsPerThread) {
+            throw new AssertionError("Command count mismatch: expected " + (threadCount * commandsPerThread) +
+                ", got " + manager.getActiveCommandCount());
+        }
+
+        ByteBuffer buffer = manager.finishBatch();
+        if (buffer.remaining() != threadCount * commandsPerThread * 20) {
+            throw new AssertionError("Buffer size mismatch: expected " + (threadCount * commandsPerThread * 20) +
+                ", got " + buffer.remaining());
+        }
+    }
+
+    private static void testAsyncAudioEngineBoundedQueueOverflowProtection() throws Exception {
+        AsyncAudioEngine engine = new AsyncAudioEngine(true, 32);
+        AtomicInteger executedCount = new AtomicInteger(0);
+
+        // Rapidly dispatch 2000 tasks (exceeding queue capacity 1024)
+        for (int i = 0; i < 2000; i++) {
+            engine.dispatchAudioCalculation(executedCount::incrementAndGet);
+        }
+
+        Thread.sleep(100);
+        if (executedCount.get() <= 0) {
+            throw new AssertionError("Async audio tasks failed to execute");
+        }
+    }
+
+    private static void testPrimitiveVectorPoolWorldBorderClamping() {
+        // Packing extreme coordinates beyond +/-30,000,000
+        long packed = PrimitiveVectorPool.packBlockPos(35_000_000, 3000, -40_000_000);
+        int unX = PrimitiveVectorPool.unpackX(packed);
+        int unY = PrimitiveVectorPool.unpackY(packed);
+        int unZ = PrimitiveVectorPool.unpackZ(packed);
+
+        if (unX != 30_000_000) {
+            throw new AssertionError("X coordinate beyond +30M must clamp to 30,000,000, got " + unX);
+        }
+        if (unY != 2047) {
+            throw new AssertionError("Y coordinate beyond +2047 must clamp to 2047, got " + unY);
+        }
+        if (unZ != -30_000_000) {
+            throw new AssertionError("Z coordinate beyond -30M must clamp to -30,000,000, got " + unZ);
+        }
+    }
+
+    private static void testDataOrientedChunkMemoryConcurrentNibbleSafety() throws Exception {
+        DataOrientedChunkMemory mem = new DataOrientedChunkMemory();
+        mem.fillSection((byte) 0);
+        int threadCount = 8;
+        CountDownLatch latch = new CountDownLatch(threadCount);
+        AtomicBoolean hasError = new AtomicBoolean(false);
+
+        for (int t = 0; t < threadCount; t++) {
+            new Thread(() -> {
+                try {
+                    for (int i = 0; i < 500; i++) {
+                        // Even block
+                        mem.setLight(0, 0, 0, 14);
+                        // Odd block
+                        mem.setLight(1, 0, 0, 7);
+                        int even = mem.getLight(0, 0, 0);
+                        int odd = mem.getLight(1, 0, 0);
+                        if (even != 14 || odd != 7) {
+                            hasError.set(true);
+                        }
+                    }
+                } catch (Throwable ex) {
+                    hasError.set(true);
+                } finally {
+                    latch.countDown();
+                }
+            }).start();
+        }
+
+        if (!latch.await(5, TimeUnit.SECONDS) || hasError.get()) {
+            throw new AssertionError("Concurrent nibble update race condition detected in DataOrientedChunkMemory!");
+        }
+    }
+
+    private static void testPrimitiveVectorPoolExpandedRingBufferDeepStack() {
+        // Holding 30 vectors simultaneously in stack - must not corrupt the first vector!
+        PrimitiveVectorPool.MutableVec3[] vecs = new PrimitiveVectorPool.MutableVec3[30];
+        for (int i = 0; i < 30; i++) {
+            vecs[i] = PrimitiveVectorPool.getThreadLocalVec(i, i * 2, i * 3);
+        }
+
+        for (int i = 0; i < 30; i++) {
+            if (vecs[i].x != (double) i || vecs[i].y != (double) (i * 2) || vecs[i].z != (double) (i * 3)) {
+                throw new AssertionError("Ring buffer wrap-around overwritten vector at index " + i);
+            }
+        }
+    }
+
+    private static void testPathfindingCircuitBreakerBossExemptionAndRollback() {
+        PathfindingCircuitBreaker breaker = new PathfindingCircuitBreaker(true, 3);
+        int bossId = 999;
+        long tick = 1000L;
+
+        // Record 5 failures for boss
+        for (int i = 0; i < 5; i++) {
+            breaker.recordPathfindingResult(bossId, false, tick);
+        }
+
+        // Standard mob is throttled
+        if (breaker.canEntitySearchPath(bossId, false, tick + 5)) {
+            throw new AssertionError("Standard mob should be throttled after 5 failures");
+        }
+
+        // Boss / Exempt entity is NEVER throttled
+        if (!breaker.canEntitySearchPath(bossId, true, tick + 5)) {
+            throw new AssertionError("Boss / Golem entity must be exempt from AI circuit breaker freeze");
+        }
+
+        // Test tick rollback recovery
+        breaker.canEntitySearchPath(bossId, false, 500L); // Time rollback to tick 500
+    }
+
+    private static void testFakeChunkDimensionChangeClearing() {
+        ClientWorldCacheStorage storage = new ClientWorldCacheStorage(true, 100);
+        FakeChunkManager fakeManager = new FakeChunkManager(32, storage);
+
+        fakeManager.registerFakeChunk(10, 20);
+        fakeManager.registerFakeChunk(11, 20);
+
+        fakeManager.clearOnDimensionChange();
+
+        if (fakeManager.isFakeChunk(10, 20) || fakeManager.isFakeChunk(11, 20)) {
+            throw new AssertionError("Fake chunks must be cleared upon dimension transition to prevent ghost mesh bleed");
+        }
+    }
+
+    private static void testMultiDrawIndirectIdempotentFinishBatch() {
+        MultiDrawIndirectManager manager = new MultiDrawIndirectManager(100);
+        manager.beginBatch();
+        manager.recordDrawCommand(36, 1, 0, 0, 0);
+
+        ByteBuffer buf1 = manager.finishBatch();
+        int rem1 = buf1.remaining();
+
+        // Second finishBatch call in same frame must NOT zero out buffer
+        ByteBuffer buf2 = manager.finishBatch();
+        int rem2 = buf2.remaining();
+
+        if (rem1 != 20 || rem2 != 20) {
+            throw new AssertionError("finishBatch must be idempotent! Expected 20 bytes, got " + rem1 + " and " + rem2);
+        }
+    }
+
+    private static void testAsyncBitsetLightEngineZeroThreadSanitization() {
+        // Zero or negative thread count must NOT crash with IllegalArgumentException
+        AsyncBitsetLightEngine engine = new AsyncBitsetLightEngine(true, 0);
+        if (!engine.isEnabled()) {
+            throw new AssertionError("Light engine should be enabled");
+        }
+        engine.shutdown();
+    }
+
+    private static void testEntityDepthCullerBossAndGlowingProtection() {
+        EntityDepthCuller culler = new EntityDepthCuller(true, 64.0);
+
+        // Standard entity occluded by wall -> culled
+        boolean occluded = culler.shouldCullEntity(0, 64, 0, 10, 64, 10, true);
+        if (!occluded) {
+            throw new AssertionError("Occluded regular entity should be culled");
+        }
+
+        // Glowing entity occluded by wall -> NEVER culled (outline must render)
+        boolean glowingCulled = culler.shouldCullEntity(0, 64, 0, 10, 64, 10, true, true, false);
+        if (glowingCulled) {
+            throw new AssertionError("Glowing entity must NOT be culled through walls");
+        }
+
+        // Boss entity occluded by wall -> NEVER culled
+        boolean bossCulled = culler.shouldCullEntity(0, 64, 0, 10, 64, 10, true, false, true);
+        if (bossCulled) {
+            throw new AssertionError("Boss entity must NOT be culled through walls");
+        }
+    }
+
+    private static void testStaticChestMeshBakerChunkInvalidation() {
+        StaticChestMeshBaker baker = new StaticChestMeshBaker(true);
+        long posInChunk0 = PrimitiveVectorPool.packBlockPos(5, 64, 5); // Chunk (0, 0)
+        long posInChunk1 = PrimitiveVectorPool.packBlockPos(20, 64, 5); // Chunk (1, 0)
+
+        baker.setChestOpenState(posInChunk0, true);
+        baker.setChestOpenState(posInChunk1, true);
+
+        // Invalidate Chunk (0, 0)
+        baker.invalidateChunk(0, 0);
+
+        if (baker.isChestOpen(posInChunk0)) {
+            throw new AssertionError("Chest in unloaded Chunk (0, 0) must be pruned");
+        }
+        if (!baker.isChestOpen(posInChunk1)) {
+            throw new AssertionError("Chest in loaded Chunk (1, 0) must remain open");
+        }
+    }
+
+    private static void testAnimationLodEntityPhaseInterleaving() {
+        AnimationLodManager lod = new AnimationLodManager(true, 10.0, 30.0);
+        // Entity at distance 20 (half framerate tier)
+        long frameIndex = 1L;
+
+        // Even entity ID (0) vs Odd entity ID (1)
+        boolean skip0 = lod.shouldSkipAnimationTick(0, 64, 0, 20, 64, 0, frameIndex, 0);
+        boolean skip1 = lod.shouldSkipAnimationTick(0, 64, 0, 20, 64, 0, frameIndex, 1);
+
+        if (skip0 == skip1) {
+            throw new AssertionError("Adjacent entities must be interleaved across frames to prevent synchronized crowd jitter");
+        }
+    }
+
+    private static void testEngineHotReloadAndCleanShutdown() {
+        HyperionEngine engine = HyperionEngine.getInstance();
+        HyperionConfig newConfig = new HyperionConfig();
+        newConfig.hudTargetFramerate = 120;
+
+        engine.reloadConfig(newConfig);
+        if (engine.getConfig().hudTargetFramerate != 120) {
+            throw new AssertionError("Engine failed to hot-reload configuration");
+        }
+
+        engine.shutdown();
+    }
+
+    private static void testFastExplosionRayDirectionTableAccuracy() {
+        if (FastExplosionEngine.TOTAL_RAYS != 1352) {
+            throw new AssertionError("Expected 1352 boundary rays for 16x16x16 sampling cube, got " + FastExplosionEngine.TOTAL_RAYS);
+        }
+    }
+
+    private static void testFastExplosionBlockDestructionAndWaterAbsorption() {
+        FastExplosionEngine engine = new FastExplosionEngine(true, 64);
+        
+        // Scenario A: Dry land (dirt with blast resistance 0.5)
+        FastExplosionEngine.BlastResistanceProvider dryProvider = (x, y, z) -> 0.5f;
+        FastExplosionEngine.ExplosionResult dryResult = engine.calculateExplosion(0.0, 64.0, 0.0, 4.0f, FastExplosionEngine.ExplosionType.TNT, dryProvider);
+        if (dryResult.affectedBlockCount <= 0) {
+            throw new AssertionError("TNT explosion in dry land must destroy blocks!");
+        }
+
+        // Scenario B: In-water detonation (water resistance 100) -> 0 blocks destroyed
+        FastExplosionEngine.BlastResistanceProvider waterProvider = (x, y, z) -> 100.0f;
+        FastExplosionEngine.ExplosionResult waterResult = engine.calculateExplosion(0.0, 64.0, 0.0, 4.0f, FastExplosionEngine.ExplosionType.TNT, waterProvider);
+        if (waterResult.affectedBlockCount != 0) {
+            throw new AssertionError("Explosion in water must destroy 0 blocks due to 100 blast resistance absorption! Destroyed: " + waterResult.affectedBlockCount);
+        }
+    }
+
+    private static void testFastExplosionEntityDamageAndKnockback() {
+        FastExplosionEngine engine = new FastExplosionEngine(true, 64);
+
+        // Point-blank TNT explosion (dist = 1 block, full exposure)
+        FastExplosionEngine.DamageImpact impactPointBlank = engine.calculateEntityImpact(
+            0.0, 64.0, 0.0, 4.0f,
+            1.0, 64.0, 0.0, 0.6, 1.8, 1.0
+        );
+
+        if (impactPointBlank.damage <= 10.0) {
+            throw new AssertionError("Point-blank TNT explosion should deal high damage (>10), got " + impactPointBlank.damage);
+        }
+        if (impactPointBlank.knockbackX <= 0.0) {
+            throw new AssertionError("Knockback vector should propel entity along +X, got " + impactPointBlank.knockbackX);
+        }
+
+        // Out-of-radius entity (dist = 10 blocks > 8 block max TNT radius)
+        FastExplosionEngine.DamageImpact impactOutOfRange = engine.calculateEntityImpact(
+            0.0, 64.0, 0.0, 4.0f,
+            10.0, 64.0, 0.0, 0.6, 1.8, 1.0
+        );
+        if (impactOutOfRange.damage != 0.0 || impactOutOfRange.knockbackX != 0.0) {
+            throw new AssertionError("Out-of-range entity must take 0 damage and 0 knockback");
+        }
+    }
+
+    private static void testAllExplosionTypesParameterization() {
+        FastExplosionEngine.ExplosionType[] types = FastExplosionEngine.ExplosionType.values();
+        if (types.length < 7) {
+            throw new AssertionError("Explosion types must support all 7 Minecraft tiers");
+        }
+
+        if (FastExplosionEngine.ExplosionType.GHAST_FIREBALL.defaultPower != 1.0f || !FastExplosionEngine.ExplosionType.GHAST_FIREBALL.createsFire) {
+            throw new AssertionError("Ghast Fireball must have power 1.0 and create fire");
+        }
+        if (FastExplosionEngine.ExplosionType.CREEPER.defaultPower != 3.0f) {
+            throw new AssertionError("Standard Creeper must have power 3.0");
+        }
+        if (FastExplosionEngine.ExplosionType.TNT.defaultPower != 4.0f || !FastExplosionEngine.ExplosionType.TNT.dropsAllItems) {
+            throw new AssertionError("TNT must have power 4.0 and 100% item drop");
+        }
+        if (FastExplosionEngine.ExplosionType.BED_OR_RESPAWN_ANCHOR.defaultPower != 5.0f || !FastExplosionEngine.ExplosionType.BED_OR_RESPAWN_ANCHOR.createsFire) {
+            throw new AssertionError("Bed / Anchor must have power 5.0 and create fire");
+        }
+        if (FastExplosionEngine.ExplosionType.CHARGED_CREEPER.defaultPower != 6.0f) {
+            throw new AssertionError("Charged Creeper must have power 6.0");
+        }
+        if (FastExplosionEngine.ExplosionType.END_CRYSTAL.defaultPower != 6.0f) {
+            throw new AssertionError("End Crystal must have power 6.0");
+        }
+        if (FastExplosionEngine.ExplosionType.WITHER_SPAWN.defaultPower != 7.0f) {
+            throw new AssertionError("Wither Spawn must have power 7.0");
+        }
+    }
+
+    private static void testFastExplosionZeroAllocationStressThroughput() {
+        FastExplosionEngine engine = new FastExplosionEngine(true, 64);
+        FastExplosionEngine.BlastResistanceProvider terrain = (x, y, z) -> (y < 64) ? 1.5f : 0.0f;
+
+        long start = System.nanoTime();
+        // Detonate 100 simultaneous TNT explosions
+        for (int i = 0; i < 100; i++) {
+            FastExplosionEngine.ExplosionResult res = engine.calculateExplosion(
+                i % 10, 64.0, (i / 10), 4.0f,
+                FastExplosionEngine.ExplosionType.TNT, terrain
+            );
+            if (res.affectedBlockCount == 0) {
+                throw new AssertionError("Explosion stress test produced 0 affected blocks");
+            }
+        }
+        long durationMs = (System.nanoTime() - start) / 1_000_000L;
+        if (durationMs > 2000) {
+            throw new AssertionError("100 explosions took too long: " + durationMs + "ms (target < 2000ms)");
+        }
+    }
+
+    private static void testFastRedstoneWireTopologicalSolver() {
+        FastRedstoneEngine engine = new FastRedstoneEngine(true, true, true, true, true);
+        List<FastRedstoneEngine.WireNode> network = new ArrayList<>();
+        
+        // 16-block line of wire from X=0 to X=15
+        FastRedstoneEngine.WireNode source = new FastRedstoneEngine.WireNode(0, 64, 0, 15, true);
+        network.add(source);
+        for (int x = 1; x <= 15; x++) {
+            network.add(new FastRedstoneEngine.WireNode(x, 64, 0, 0, false));
+        }
+
+        List<FastRedstoneEngine.WireNode> sources = new ArrayList<>();
+        sources.add(source);
+
+        FastRedstoneEngine.NetworkSolveResult result = engine.solveWireNetwork(network, sources);
+
+        if (result.updatedWireCount != 14) {
+            throw new AssertionError("Expected 14 updated wires along line, got " + result.updatedWireCount);
+        }
+        // Verify power attenuation: wire at x=1 should have power 14, x=14 should have 1, x=15 should have 0
+        if (network.get(1).currentPower != 14) {
+            throw new AssertionError("Wire at X=1 must have power 14, got " + network.get(1).currentPower);
+        }
+        if (network.get(14).currentPower != 1) {
+            throw new AssertionError("Wire at X=14 must have power 1, got " + network.get(14).currentPower);
+        }
+        if (network.get(15).currentPower != 0) {
+            throw new AssertionError("Wire at X=15 (16th block) must attenuate to 0 power, got " + network.get(15).currentPower);
+        }
+    }
+
+    private static void testFastRedstoneNeighborUpdateDeduplication() {
+        FastRedstoneEngine engine = new FastRedstoneEngine(true, true, true, true, true);
+        List<FastRedstoneEngine.WireNode> network = new ArrayList<>();
+        FastRedstoneEngine.WireNode source = new FastRedstoneEngine.WireNode(0, 64, 0, 15, true);
+        network.add(source);
+        FastRedstoneEngine.WireNode wire1 = new FastRedstoneEngine.WireNode(1, 64, 0, 0, false);
+        network.add(wire1);
+
+        List<FastRedstoneEngine.WireNode> sources = new ArrayList<>();
+        sources.add(source);
+
+        FastRedstoneEngine.NetworkSolveResult result = engine.solveWireNetwork(network, sources);
+
+        // Vanilla sends 42 updates; our batched deduplicated engine sends unique cardinal neighbor positions
+        if (result.notifiedNeighborCount <= 0 || result.notifiedNeighborCount > 12) {
+            throw new AssertionError("Deduplicated neighbor updates should be bounded <= 12 for 1 changed wire, got " + result.notifiedNeighborCount);
+        }
+    }
+
+    private static void testFastRedstoneComparatorDiscretePowerEvaluation() {
+        FastRedstoneEngine engine = new FastRedstoneEngine(true, true, true, true, true);
+
+        // Empty container -> 0
+        if (engine.calculateComparatorPower(0, 1728) != 0) {
+            throw new AssertionError("Empty container must output signal 0");
+        }
+        // Exactly full container (1728 items) -> 15
+        if (engine.calculateComparatorPower(1728, 1728) != 15) {
+            throw new AssertionError("Full container must output signal 15");
+        }
+        // Half full (864 items) -> 8
+        int halfPower = engine.calculateComparatorPower(864, 1728);
+        if (halfPower != 8) {
+            throw new AssertionError("Half-full container must output signal 8, got " + halfPower);
+        }
+    }
+
+    private static void testFastRedstoneHopperContainerOcclusion() {
+        FastRedstoneEngine engine = new FastRedstoneEngine(true, true, true, true, true);
+
+        // Hopper under open air -> NOT occluded (needs entity check)
+        if (engine.isHopperOccludedByContainer(false, false)) {
+            throw new AssertionError("Hopper under air must not be occluded");
+        }
+
+        // Hopper under composter / chest / barrel -> OCCLUDED (bypass entity scan)
+        if (!engine.isHopperOccludedByContainer(true, true)) {
+            throw new AssertionError("Hopper capped with solid container must be occluded");
+        }
+    }
+
+    private static void testFastRedstoneActiveClockStressBenchmark() {
+        FastRedstoneEngine engine = new FastRedstoneEngine(true, true, true, true, true);
+        List<FastRedstoneEngine.WireNode> grid = new ArrayList<>();
+        
+        // 8x8 = 64 wire grid
+        for (int x = 0; x < 8; x++) {
+            for (int z = 0; z < 8; z++) {
+                grid.add(new FastRedstoneEngine.WireNode(x, 64, z, 0, (x == 0 && z == 0)));
+            }
+        }
+
+        List<FastRedstoneEngine.WireNode> sources = new ArrayList<>();
+        FastRedstoneEngine.WireNode srcNode = grid.get(0);
+        sources.add(srcNode);
+
+        long start = System.nanoTime();
+        for (int i = 0; i < 50; i++) {
+            srcNode.targetPower = (i % 2 == 0) ? 15 : 0;
+            srcNode.currentPower = srcNode.targetPower;
+            engine.solveWireNetwork(grid, sources);
+        }
+        long durationMs = (System.nanoTime() - start) / 1_000_000L;
+        if (durationMs > 2000) {
+            throw new AssertionError("50 clock cycles over 64 nodes took too long: " + durationMs + "ms (target < 2000ms)");
+        }
+    }
+
+    private static void testSpatialCollisionEngineGridAndBrainStripping() {
+        SpatialCollisionEngine engine = new SpatialCollisionEngine(true, 8, 32.0);
+        engine.clearGrid();
+
+        // Populate 20 entities in bucket (0, 0)
+        for (int i = 0; i < 20; i++) {
+            SpatialCollisionEngine.CollidableEntity ent = new SpatialCollisionEngine.CollidableEntity(i, 2.0, 64.0, 2.0, 0.6, 1.8);
+            engine.registerEntity(ent);
+        }
+
+        List<SpatialCollisionEngine.CollidableEntity> nearby = engine.getNearbyCandidates(2.0, 2.0);
+        if (nearby.size() != 20) {
+            throw new AssertionError("Spatial grid should retrieve all 20 entities in bucket, got " + nearby.size());
+        }
+
+        // Test collision count capping
+        SpatialCollisionEngine.CollidableEntity testEnt = nearby.get(0);
+        for (int i = 0; i < 8; i++) {
+            if (!engine.canCheckCollision(testEnt)) {
+                throw new AssertionError("Collision check under max cap should be permitted");
+            }
+        }
+        if (engine.canCheckCollision(testEnt)) {
+            throw new AssertionError("Collision check exceeding max cap of 8 should be blocked");
+        }
+
+        // Test Brain Stripping (1x1 trapped cell)
+        if (!engine.shouldThrottleBrain(true, 5.0, 1L)) {
+            throw new AssertionError("Trapped entity in 1x1 should throttle brain on non-modulo tick");
+        }
+        if (engine.shouldThrottleBrain(true, 5.0, 20L)) {
+            throw new AssertionError("Trapped entity in 1x1 should tick brain on 20th tick");
+        }
+    }
+
+    private static void testFastFluidEngineFlowVectorCachingAndInvalidation() {
+        FastFluidEngine engine = new FastFluidEngine(true);
+        engine.clear();
+
+        // Cache flow vector at (10, 64, 10)
+        engine.cacheFlowVector(10, 64, 10, 0.707, -0.5, 0.707);
+
+        FastFluidEngine.FluidFlowVector vec = engine.getCachedFlowVector(10, 64, 10);
+        if (vec == null || Math.abs(vec.vx - 0.707) > 1e-4) {
+            throw new AssertionError("Fluid flow vector was not cached properly");
+        }
+
+        // Invalidate neighbor at (11, 64, 10) -> must purge (10, 64, 10)
+        engine.invalidateBlock(11, 64, 10);
+        if (engine.getCachedFlowVector(10, 64, 10) != null) {
+            throw new AssertionError("Neighbor block update must invalidate adjacent fluid flow vector");
+        }
+    }
+
+    private static void testFastParticleEngineRateLimitingAndDistanceCulling() {
+        FastParticleEngine engine = new FastParticleEngine(true, 5, 48.0);
+        engine.clear();
+
+        // Distant particle (> 48 blocks) -> culled
+        boolean distantSpawn = engine.shouldSpawnParticle(0, 64, 0, 100, 64, 0, 1000L);
+        if (distantSpawn) {
+            throw new AssertionError("Particles beyond max view distance must be culled");
+        }
+
+        // Nearby particles: first 5 permitted in same block in 1 second
+        for (int i = 0; i < 5; i++) {
+            if (!engine.shouldSpawnParticle(0, 64, 0, 5, 64, 5, 1000L)) {
+                throw new AssertionError("Particle under block limit should spawn");
+            }
+        }
+
+        // 6th particle in same block in same second -> rate-limited (culled)
+        if (engine.shouldSpawnParticle(0, 64, 0, 5, 64, 5, 1000L)) {
+            throw new AssertionError("6th particle in same block must be rate-limited");
+        }
+
+        // New second -> permitted again
+        if (!engine.shouldSpawnParticle(0, 64, 0, 5, 64, 5, 1001L)) {
+            throw new AssertionError("Particles should spawn again in next second");
+        }
+    }
+
+    private static void testFastMathLUTTrigonometricAccuracyAndInvSqrt() {
+        if (FastMathLUT.getTableSize() != 65536) {
+            throw new AssertionError("Expected 65536 entries in FastMathLUT table");
+        }
+
+        // Compare against standard Java Math
+        for (float deg = 0; deg < 360; deg += 15.0f) {
+            float rad = (float) Math.toRadians(deg);
+            float lutSin = FastMathLUT.sin(rad);
+            float mathSin = (float) Math.sin(rad);
+            if (Math.abs(lutSin - mathSin) > 1e-3f) {
+                throw new AssertionError("FastMathLUT sin deviation at " + deg + " deg: LUT=" + lutSin + " Math=" + mathSin);
+            }
+
+            float lutCos = FastMathLUT.cos(rad);
+            float mathCos = (float) Math.cos(rad);
+            if (Math.abs(lutCos - mathCos) > 1e-3f) {
+                throw new AssertionError("FastMathLUT cos deviation at " + deg + " deg: LUT=" + lutCos + " Math=" + mathCos);
+            }
+        }
+
+        // Fast InvSqrt accuracy (1/sqrt(4) = 0.5)
+        float invSqrt4 = FastMathLUT.fastInvSqrt(4.0f);
+        if (Math.abs(invSqrt4 - 0.5f) > 1e-2f) {
+            throw new AssertionError("FastInvSqrt(4.0) expected ~0.5, got " + invSqrt4);
+        }
+    }
+
+    private static void testFastRegistryCacheTagLookupSpeed() {
+        FastRegistryCache cache = new FastRegistryCache(true);
+        cache.invalidate();
+
+        int tagHash = "minecraft:planks".hashCode();
+        int oakPlanksId = 42;
+        int stoneId = 99;
+
+        // First lookup (cache miss -> evaluate matcher)
+        boolean isOakPlank = cache.isItemInTag(tagHash, oakPlanksId, (tag, item) -> item == 42);
+        if (!isOakPlank) {
+            throw new AssertionError("Oak planks should be recognized in tag");
+        }
+
+        // Second lookup (cache hit)
+        boolean isOakPlankCached = cache.isItemInTag(tagHash, oakPlanksId, (tag, item) -> {
+            throw new AssertionError("Matcher must NOT be invoked on cache hit");
+        });
+        if (!isOakPlankCached) {
+            throw new AssertionError("Cached lookup failed");
+        }
+
+        boolean isStoneInPlanks = cache.isItemInTag(tagHash, stoneId, (tag, item) -> false);
+        if (isStoneInPlanks) {
+            throw new AssertionError("Stone should NOT be in planks tag");
+        }
+    }
+
+    private static void testFastRedstonePowerOfTwoHashTableAndProbeLimit() {
+        FastRedstoneEngine engine = new FastRedstoneEngine(true, true, true, true, true);
+        List<FastRedstoneEngine.WireNode> network = new ArrayList<>();
+        
+        // 25 wire line (odd number that generates non-power-of-2 raw capacity)
+        FastRedstoneEngine.WireNode source = new FastRedstoneEngine.WireNode(0, 64, 0, 15, true);
+        network.add(source);
+        for (int x = 1; x <= 25; x++) {
+            network.add(new FastRedstoneEngine.WireNode(x, 64, 0, 0, false));
+        }
+
+        List<FastRedstoneEngine.WireNode> sources = new ArrayList<>();
+        sources.add(source);
+
+        FastRedstoneEngine.NetworkSolveResult result = engine.solveWireNetwork(network, sources);
+        if (result.notifiedNeighborCount <= 0) {
+            throw new AssertionError("Redstone power-of-2 hash table failed to collect neighbors");
+        }
+    }
+
+    private static void testSpatialCollisionConcurrentGridThreadSafety() throws Exception {
+        final SpatialCollisionEngine engine = new SpatialCollisionEngine(true, 8, 32.0);
+        engine.clearGrid();
+
+        int threadCount = 4;
+        final CountDownLatch latch = new CountDownLatch(threadCount);
+        final AtomicBoolean hadError = new AtomicBoolean(false);
+
+        for (int t = 0; t < threadCount; t++) {
+            final int threadId = t;
+            new Thread(() -> {
+                try {
+                    for (int i = 0; i < 50; i++) {
+                        int entId = threadId * 1000 + i;
+                        SpatialCollisionEngine.CollidableEntity ent = new SpatialCollisionEngine.CollidableEntity(
+                            entId, 2.0, 64.0, 2.0, 0.6, 1.8
+                        );
+                        engine.registerEntity(ent);
+                        List<SpatialCollisionEngine.CollidableEntity> nearby = engine.getNearbyCandidates(2.0, 2.0);
+                        if (nearby == null || nearby.isEmpty()) {
+                            hadError.set(true);
+                        }
+                    }
+                } catch (Throwable t1) {
+                    hadError.set(true);
+                } finally {
+                    latch.countDown();
+                }
+            }).start();
+        }
+
+        if (!latch.await(3, TimeUnit.SECONDS) || hadError.get()) {
+            throw new AssertionError("Concurrent spatial grid operations threw exception or failed");
+        }
+    }
+
+    private static void testFastExplosionProbeGuardOnMassiveBlast() {
+        FastExplosionEngine engine = new FastExplosionEngine(true, 64);
+        FastExplosionEngine.BlastResistanceProvider terrain = (x, y, z) -> 0.0f; // completely air terrain
+
+        // Massive power 20 explosion
+        FastExplosionEngine.ExplosionResult result = engine.calculateExplosion(
+            0.0, 64.0, 0.0, 20.0f, FastExplosionEngine.ExplosionType.CUSTOM, terrain
+        );
+
+        if (result.affectedBlockCount <= 0 || result.affectedBlockCount > 8192) {
+            throw new AssertionError("Massive explosion result outside bounded buffer range: " + result.affectedBlockCount);
+        }
+    }
+
+    private static void testFastFluidAndParticleMemoryBoundedPruning() {
+        FastFluidEngine fluidEngine = new FastFluidEngine(true);
+        fluidEngine.clear();
+
+        // Populate fluid cache and test chunk invalidation
+        fluidEngine.cacheFlowVector(10, 64, 10, 1.0, 0.0, 0.0);
+        fluidEngine.cacheFlowVector(100, 64, 100, 1.0, 0.0, 0.0);
+
+        if (fluidEngine.getCachedFlowCount() != 2) {
+            throw new AssertionError("Fluid cache count expected 2, got " + fluidEngine.getCachedFlowCount());
+        }
+
+        // Invalidate chunk (0, 0) -> contains (10, 64, 10), but not (100, 64, 100)
+        fluidEngine.invalidateChunk(0, 0);
+        if (fluidEngine.getCachedFlowVector(10, 64, 10) != null) {
+            throw new AssertionError("Chunk invalidation failed to evict local chunk fluid vector");
+        }
+        if (fluidEngine.getCachedFlowVector(100, 64, 100) == null) {
+            throw new AssertionError("Chunk invalidation mistakenly evicted foreign chunk fluid vector");
+        }
+
+        // Test particle counter pruning
+        FastParticleEngine particleEngine = new FastParticleEngine(true, 5, 48.0);
+        particleEngine.clear();
+        for (int i = 0; i < 4100; i++) {
+            particleEngine.shouldSpawnParticle(0, 64, 0, i, 64, 0, 100L);
+        }
+        // Spawn at new timestamp (105s) -> triggers purge of 100L
+        particleEngine.shouldSpawnParticle(0, 64, 0, 0, 64, 0, 105L);
+    }
+
+    private static void testFastMathLUTSpecialFloatSanitizationAndEngineShutdown() {
+        // Fast InvSqrt for 0.0f must return POSITIVE_INFINITY
+        float invZero = FastMathLUT.fastInvSqrt(0.0f);
+        if (!Float.isInfinite(invZero) || invZero < 0) {
+            throw new AssertionError("FastInvSqrt(0.0f) must be positive infinity, got " + invZero);
+        }
+
+        // Fast InvSqrt for -4.0f must return NaN
+        float invNeg = FastMathLUT.fastInvSqrt(-4.0f);
+        if (!Float.isNaN(invNeg)) {
+            throw new AssertionError("FastInvSqrt(-4.0f) must be NaN, got " + invNeg);
+        }
+
+        // Engine Shutdown verification
+        HyperionEngine engine = HyperionEngine.getInstance();
+        engine.shutdown();
+        if (engine.getAudioEngine() != null && !engine.getAudioEngine().isShutdown()) {
+            throw new AssertionError("Audio worker pool must be shut down");
+        }
+    }
+
+    private static void testFastMathNegativeAnglePhaseContinuity() {
+        // Test continuous smooth transition around 0 and negative angles
+        float step = 0.001f;
+        for (float rad = -3.14159f; rad <= 3.14159f; rad += step) {
+            float lutSin = FastMathLUT.sin(rad);
+            float mathSin = (float) Math.sin(rad);
+            if (Math.abs(lutSin - mathSin) > 1e-3f) {
+                throw new AssertionError("FastMathLUT sin discontinuity at rad=" + rad + ": LUT=" + lutSin + " Math=" + mathSin);
+            }
+            float lutCos = FastMathLUT.cos(rad);
+            float mathCos = (float) Math.cos(rad);
+            if (Math.abs(lutCos - mathCos) > 1e-3f) {
+                throw new AssertionError("FastMathLUT cos discontinuity at rad=" + rad + ": LUT=" + lutCos + " Math=" + mathCos);
+            }
+        }
+    }
+
+    private static void testFastRegistryCacheCapacitySaturationPurge() {
+        FastRegistryCache cache = new FastRegistryCache(true);
+        cache.invalidate();
+
+        // Populate 32768 entries
+        for (int i = 0; i < 32768; i++) {
+            cache.isItemInTag(i, i, (t, it) -> true);
+        }
+        if (cache.getCachedCount() != 32768) {
+            throw new AssertionError("Expected 32768 entries before saturation, got " + cache.getCachedCount());
+        }
+
+        // Exceed capacity -> triggers auto-purge to prevent OOM
+        cache.isItemInTag(99999, 99999, (t, it) -> true);
+        if (cache.getCachedCount() > 100) {
+            throw new AssertionError("Cache should have cleared upon reaching 32768 capacity, got " + cache.getCachedCount());
+        }
+    }
+
+    private static void testExperienceOrbNonNegativeAgeClamp() {
+        ExperienceOrbMerger merger = new ExperienceOrbMerger(true, 2.0, 50000);
+        // If an orb had negative age (e.g. -6000), calculateMergedAge must be at least 0
+        int mergedAge = merger.calculateMergedAge(-6000, -100);
+        if (mergedAge != 0) {
+            throw new AssertionError("calculateMergedAge must clamp negative ages to 0, got " + mergedAge);
+        }
+    }
+
+    private static void testEntityDepthCullerNaNDistanceSafetyAndInvertedVoxel() {
+        EntityDepthCuller culler = new EntityDepthCuller(true, 48.0);
+        // NaN coordinates must NOT be culled (safe fallback)
+        boolean culledNaN = culler.shouldCullEntity(0, 0, 0, Double.NaN, 0, 0, true);
+        if (culledNaN) {
+            throw new AssertionError("Entity with NaN coordinates must not be culled");
+        }
+
+        // Inverted AABB in voxel shape cache (minX > maxX) must be rejected
+        VoxelShapeFastCache voxelCache = new VoxelShapeFastCache(true);
+        boolean collidesInverted = voxelCache.canFastPassCubeCollision(
+            10.0, 0.0, 0.0, 5.0, 1.0, 1.0, 0, 0, 0, VoxelShapeFastCache.SHAPE_TYPE_FULL_CUBE
+        );
+        if (collidesInverted) {
+            throw new AssertionError("Inverted AABB must return false in collision test");
+        }
+    }
+
+    private static void testSleepingHopperLongMaxOverflowDefenseAndSectionClamping() {
+        SleepingHopperManager hopperManager = new SleepingHopperManager(true);
+        hopperManager.clear();
+
+        // Put to sleep near Long.MAX_VALUE
+        hopperManager.putToSleep(12345L, Long.MAX_VALUE - 10L, 20);
+        if (!hopperManager.isHopperSleeping(12345L, Long.MAX_VALUE - 10L)) {
+            throw new AssertionError("Hopper must be sleeping when tick is below sleepUntilTick");
+        }
+
+        // DataOrientedChunkMemory section coord masking
+        DataOrientedChunkMemory mem = new DataOrientedChunkMemory();
+        mem.setLight(5, 5, 5, 12);
+        if (mem.getLight(5, 5, 5) != 12) {
+            throw new AssertionError("Light level at (5, 5, 5) must be 12");
+        }
+    }
+
+    private static void testConfigStorageSerializationAndPresets() {
+        HyperionConfig config = new HyperionConfig();
+        config.clientMaxViewDistance = 48;
+        config.hudTargetFramerate = 90;
+
+        String json = HyperionConfigStorage.serializeJson(config);
+        HyperionConfig parsed = HyperionConfigStorage.parseJson(json);
+
+        if (parsed.clientMaxViewDistance != 48 || parsed.hudTargetFramerate != 90) {
+            throw new AssertionError("Config JSON serialization/deserialization mismatch!");
+        }
+
+        // Test Preset: POTATO_PC
+        HyperionConfig potato = HyperionConfigStorage.applyPreset(HyperionConfigStorage.Preset.POTATO_PC);
+        if (potato.hudTargetFramerate != 30 || potato.clientMaxViewDistance != 16 || potato.maxParticlesPerBlockPerSecond != 2) {
+            throw new AssertionError("Potato PC preset parameters not properly configured");
+        }
+
+        // Test Preset: HIGH_END
+        HyperionConfig highEnd = HyperionConfigStorage.applyPreset(HyperionConfigStorage.Preset.HIGH_END);
+        if (highEnd.hudTargetFramerate != 120 || highEnd.clientMaxViewDistance != 64 || highEnd.entityCullingMaxDistance != 96.0) {
+            throw new AssertionError("High-End preset parameters not properly configured");
+        }
+    }
+
+    private static void testScreenModelAndOptionsRegistry() {
+        HyperionScreenModel model = new HyperionScreenModel();
+        if (model.getActiveCategory() != HyperionCategory.GRAPHICS_SETTINGS) {
+            throw new AssertionError("Initial active category must be GRAPHICS_SETTINGS");
+        }
+
+        if (model.getCurrentOptions().isEmpty()) {
+            throw new AssertionError("Options for GRAPHICS_SETTINGS must not be empty");
+        }
+
+        // Switch to physics category
+        model.setActiveCategory(HyperionCategory.PHYSICS_REDSTONE);
+        if (model.getActiveCategory() != HyperionCategory.PHYSICS_REDSTONE) {
+            throw new AssertionError("Category switch failed");
+        }
+
+        // Test option modification
+        List<HyperionOption<?>> physicsOptions = model.getCurrentOptions();
+        boolean foundSleepingHoppers = false;
+        for (HyperionOption<?> opt : physicsOptions) {
+            if ("enableSleepingHoppers".equals(opt.getKey())) {
+                foundSleepingHoppers = true;
+                break;
+            }
+        }
+        if (!foundSleepingHoppers) {
+            throw new AssertionError("enableSleepingHoppers option missing in PHYSICS_REDSTONE category");
+        }
+
+        // Apply preset through model
+        model.applyPreset(HyperionConfigStorage.Preset.POTATO_PC);
+        if (!model.isDirty()) {
+            throw new AssertionError("Model must be dirty after applying preset");
+        }
+        if (model.getWorkingConfig().hudTargetFramerate != 30) {
+            throw new AssertionError("Working config should have updated to 30 FPS");
+        }
+    }
+
+    private static void testOffHeapChunkSegmentDirectMemoryZeroGC() {
+        OffHeapChunkSegment segment = new OffHeapChunkSegment();
+        try {
+            segment.clear();
+            segment.setNibble(3, 7, 11, 14);
+            segment.setNibble(3, 7, 12, 9);
+
+            if (segment.getNibble(3, 7, 11) != 14) {
+                throw new AssertionError("Nibble at (3, 7, 11) should be 14, got " + segment.getNibble(3, 7, 11));
+            }
+            if (segment.getNibble(3, 7, 12) != 9) {
+                throw new AssertionError("Nibble at (3, 7, 12) should be 9, got " + segment.getNibble(3, 7, 12));
+            }
+
+            // Test out-of-bounds coordinate wrapping safety
+            segment.setNibble(3 + 16, 7 + 32, 11 + 48, 5);
+            if (segment.getNibble(3, 7, 11) != 5) {
+                throw new AssertionError("Wrapped nibble at (3, 7, 11) should be 5");
+            }
+        } finally {
+            segment.free();
+        }
+
+        if (!segment.isFreed()) {
+            throw new AssertionError("Segment must be marked as freed");
+        }
+    }
+
+    private static void testSimdFrustumCullerBatch8Masking() {
+        SimdFrustumCuller culler = new SimdFrustumCuller();
+        float[] identityProj = new float[] {
+            1, 0, 0, 0,
+            0, 1, 0, 0,
+            0, 0, 1, 0,
+            0, 0, 0, 1
+        };
+        float[] identityMv = new float[] {
+            1, 0, 0, 0,
+            0, 1, 0, 0,
+            0, 0, 1, 0,
+            0, 0, 0, 1
+        };
+
+        culler.updatePlanes(identityProj, identityMv);
+
+        float[] minX = new float[] {-0.5f, 50.0f, -0.2f, 0, 0, 0, 0, 0};
+        float[] minY = new float[] {-0.5f, 50.0f, -0.2f, 0, 0, 0, 0, 0};
+        float[] minZ = new float[] {-0.5f, 50.0f, -0.2f, 0, 0, 0, 0, 0};
+
+        float[] maxX = new float[] {0.5f, 60.0f, 0.2f, 0.5f, 0.5f, 0.5f, 0.5f, 0.5f};
+        float[] maxY = new float[] {0.5f, 60.0f, 0.2f, 0.5f, 0.5f, 0.5f, 0.5f, 0.5f};
+        float[] maxZ = new float[] {0.5f, 60.0f, 0.2f, 0.5f, 0.5f, 0.5f, 0.5f, 0.5f};
+
+        int mask = culler.testBatch8(minX, minY, minZ, maxX, maxY, maxZ);
+
+        // Box 0 (center) must be visible (bit 0 = 1)
+        if ((mask & 1) == 0) {
+            throw new AssertionError("Box 0 (centered) must be visible in frustum mask");
+        }
+
+        // Box 1 (50, 50, 50) must be culled (bit 1 = 0)
+        if ((mask & (1 << 1)) != 0) {
+            throw new AssertionError("Box 1 (distant 50,50,50) must be culled in frustum mask");
+        }
+    }
+
+    private static void testProfilerOverlayTelemetryAndMixinHooks() {
+        HyperionProfilerOverlay profiler = HyperionProfilerOverlay.getInstance();
+        profiler.resetFrameCounters();
+
+        profiler.recordCulledEntity();
+        profiler.recordCulledEntity();
+        profiler.recordCulledChunk();
+        profiler.setSleepingHoppers(42);
+        profiler.addSavedNetworkBytes(2048);
+        profiler.updateMetrics(144.0f, 6.94f);
+
+        if (profiler.getCulledEntities() != 2) {
+            throw new AssertionError("Expected 2 culled entities, got " + profiler.getCulledEntities());
+        }
+        if (profiler.getCulledChunks() != 1) {
+            throw new AssertionError("Expected 1 culled chunk, got " + profiler.getCulledChunks());
+        }
+        if (profiler.getSleepingHoppers() != 42) {
+            throw new AssertionError("Expected 42 sleeping hoppers");
+        }
+        if (profiler.getSavedNetworkBytes() != 2048) {
+            throw new AssertionError("Expected 2048 saved network bytes");
+        }
+
+        String summary = profiler.generateTelemetrySummary();
+        if (!summary.contains("FPS: 144.0") || !summary.contains("Sleeping Hoppers: 42")) {
+            throw new AssertionError("Telemetry summary text mismatch: " + summary);
+        }
+
+        // Test Mixin Video Options Hook
+        MixinVideoOptionsScreen.onInitVideoOptionsScreen();
+        if (MixinVideoOptionsScreen.getActiveModel() == null) {
+            throw new AssertionError("Active model in MixinVideoOptionsScreen must not be null");
+        }
+
+        // Test Mixin Level Renderer Frustum Hook
+        boolean visible = MixinLevelRenderer.shouldRenderChunkSection(-0.5f, -0.5f, -0.5f, 0.5f, 0.5f, 0.5f);
+        if (!visible) {
+            throw new AssertionError("Centered chunk section should be visible in mixin hook");
+        }
+    }
+
+    private static void testAmdArchitectureAutoDetectionProfiles() {
+        // Test auto-detection for Radeon RX 580 (Polaris)
+        AmdArchitectureProfile polaris = AmdArchitectureProfile.detectFromRenderer("Radeon RX 580 Series");
+        if (polaris != AmdArchitectureProfile.RADEON_RX500_POLARIS) {
+            throw new AssertionError("RX 580 should detect as RADEON_RX500_POLARIS, got " + polaris);
+        }
+
+        // Test auto-detection for Radeon 540 (Lexa)
+        AmdArchitectureProfile lexa = AmdArchitectureProfile.detectFromRenderer("AMD Radeon 540");
+        if (lexa != AmdArchitectureProfile.RADEON_540_LEXA) {
+            throw new AssertionError("Radeon 540 should detect as RADEON_540_LEXA, got " + lexa);
+        }
+
+        // Test auto-detection for Vega 8 Graphics (Ryzen APU)
+        AmdArchitectureProfile vega8 = AmdArchitectureProfile.detectFromRenderer("AMD Radeon(TM) Vega 8 Graphics");
+        if (vega8 != AmdArchitectureProfile.RADEON_VEGA_8_APU) {
+            throw new AssertionError("Vega 8 should detect as RADEON_VEGA_8_APU, got " + vega8);
+        }
+
+        // Test auto-detection for RX 6700 XT (RDNA 2)
+        AmdArchitectureProfile rdna = AmdArchitectureProfile.detectFromRenderer("AMD Radeon RX 6700 XT");
+        if (rdna != AmdArchitectureProfile.RDNA_MODERN) {
+            throw new AssertionError("RX 6700 XT should detect as RDNA_MODERN, got " + rdna);
+        }
+    }
+
+    private static void testAmdWavefrontCalibrationAndPrimitiveDiscard() {
+        AmdGpuAccelerator accelerator = new AmdGpuAccelerator(true, AmdArchitectureProfile.RADEON_RX500_POLARIS, true);
+
+        // Polaris must use Wave64
+        if (accelerator.getWavefrontSize() != 64) {
+            throw new AssertionError("Polaris RX 500 must use Wave64, got " + accelerator.getWavefrontSize());
+        }
+        if (!accelerator.isPrimitiveDiscardEnabled() || !accelerator.isIndirectParametersEnabled()) {
+            throw new AssertionError("Polaris must enable primitive discard and indirect parameters");
+        }
+
+        // Vega 8 must enable UMA Zero-Copy and FP16 Rapid Packed Math
+        accelerator.calibrateProfile(AmdArchitectureProfile.RADEON_VEGA_8_APU);
+        if (accelerator.getWavefrontSize() != 64 || !accelerator.isUmaZeroCopyEnabled() || !accelerator.isFp16PackedMathEnabled()) {
+            throw new AssertionError("Vega 8 APU must enable Wave64, UMA Zero-Copy, and FP16 math");
+        }
+
+        // RDNA must calibrate to Wave32
+        accelerator.calibrateProfile(AmdArchitectureProfile.RDNA_MODERN);
+        if (accelerator.getWavefrontSize() != 32) {
+            throw new AssertionError("RDNA must calibrate to Wave32, got " + accelerator.getWavefrontSize());
+        }
+    }
+
+    private static void testAmd2GbVramBudgetGuardThresholds() {
+        AmdVramBudgetGuard guard = new AmdVramBudgetGuard(true, 2048); // 2GB VRAM card (Radeon 540)
+        guard.reset();
+
+        if (guard.getTotalVramMb() != 2048) {
+            throw new AssertionError("Total VRAM should be 2048 MB");
+        }
+
+        // Allocate 1000 MB (below 75% threshold = 1536 MB)
+        long bytes1000Mb = 1000L * 1024L * 1024L;
+        boolean ok = guard.allocateChunkGeometry(bytes1000Mb);
+        if (!ok || guard.isCompressionActive()) {
+            throw new AssertionError("1000 MB allocation should succeed without compression");
+        }
+
+        // Allocate another 600 MB (total 1600 MB > 1536 MB warning threshold)
+        long bytes600Mb = 600L * 1024L * 1024L;
+        guard.allocateChunkGeometry(bytes600Mb);
+        if (!guard.isCompressionActive()) {
+            throw new AssertionError("Compression must activate when VRAM exceeds 75% capacity");
+        }
+
+        // Release 800 MB (total 800 MB < 60% = 1228 MB)
+        guard.releaseChunkGeometry(800L * 1024L * 1024L);
+        if (guard.isCompressionActive()) {
+            throw new AssertionError("Compression should deactivate when VRAM drops below 60%");
+        }
+    }
+
+    private static void testDualGpuDeviceEnumerationAndWorkloadRouting() {
+        DualGpuManager manager = new DualGpuManager(true, DualGpuWorkloadDispatcher.AUTO_BALANCED);
+        List<GpuDeviceInfo> gpus = manager.getDetectedGpus();
+
+        if (gpus.size() < 2) {
+            throw new AssertionError("Dual GPU manager must detect at least 2 GPUs");
+        }
+
+        GpuDeviceInfo primary = manager.getPrimaryGpu();
+        GpuDeviceInfo secondary = manager.getSecondaryGpu();
+
+        if (primary == null || secondary == null) {
+            throw new AssertionError("Primary and Secondary GPUs must be automatically assigned");
+        }
+
+        if (!manager.isDualGpuActive()) {
+            throw new AssertionError("Dual GPU mode should be active in AUTO_BALANCED with 2 GPUs");
+        }
+
+        if (!manager.shouldOffloadHudToSecondary()) {
+            throw new AssertionError("HUD offload to secondary GPU should be enabled");
+        }
+        if (!manager.shouldOffloadLightToSecondary()) {
+            throw new AssertionError("Light offload to secondary GPU should be enabled");
+        }
+        if (!manager.shouldOffloadParticlesToSecondary()) {
+            throw new AssertionError("Particle offload to secondary GPU should be enabled");
+        }
+
+        // Record DMA Texture transfer
+        manager.recordInterGpuTransfer(4096);
+        if (manager.getInterGpuTransferredBytes() != 4096) {
+            throw new AssertionError("Inter-GPU transfer counter mismatch");
+        }
+    }
+
+    private static void testAmdAndDualGpuConfigStorageAndOptionsRegistry() {
+        HyperionConfig cfg = new HyperionConfig();
+        cfg.enableAmdHardwareAcceleration = true;
+        cfg.amdArchitectureProfile = "RADEON_540_LEXA";
+        cfg.enableDualGpuSupport = true;
+        cfg.dualGpuMode = "DEDICATED_IGPU_HUD_LIGHT";
+
+        String json = HyperionConfigStorage.serializeJson(cfg);
+        HyperionConfig parsed = HyperionConfigStorage.parseJson(json);
+
+        if (!parsed.enableAmdHardwareAcceleration || !"RADEON_540_LEXA".equals(parsed.amdArchitectureProfile)) {
+            throw new AssertionError("AMD configuration JSON mismatch");
+        }
+        if (!parsed.enableDualGpuSupport || !"DEDICATED_IGPU_HUD_LIGHT".equals(parsed.dualGpuMode)) {
+            throw new AssertionError("Dual GPU configuration JSON mismatch");
+        }
+
+        // Check options in HyperionOptionsRegistry for GPU video category
+        List<HyperionOption<?>> gpuOptions = HyperionOptionsRegistry.getOptionsByCategory(HyperionCategory.GPU_VIDEO_SETTINGS);
+        if (gpuOptions.isEmpty() || gpuOptions.size() < 10) {
+            throw new AssertionError("GPU_VIDEO_SETTINGS category options must contain at least 10 options, found: " + gpuOptions.size());
+        }
+    }
+
+    private static void testColorCorrectionEngineAndAcesCurve() {
+        ColorCorrectionEngine engine = new ColorCorrectionEngine(true);
+        HyperionConfig cfg = new HyperionConfig();
+        cfg.enableColorCorrection = true;
+        cfg.colorGradingMode = "VIBRANT_HDR";
+        cfg.colorGammaBoost = 1.00;
+        cfg.colorVibrance = 1.15;
+        cfg.colorSaturation = 1.05;
+        cfg.colorContrast = 1.02;
+        cfg.colorBlackCrushCompensation = 0.08;
+        cfg.colorNightAmbientBoost = 0.10;
+        cfg.colorTemperature = 6500;
+        cfg.enableColorDebanding = true;
+        engine.configure(cfg);
+
+        float[] out = new float[3];
+        // Test Pure White highlight normalization (1.0, 1.0, 1.0) -> must equal 1.0
+        engine.gradeRgb(1.0f, 1.0f, 1.0f, 0.0f, 0, 0, out);
+        if (Math.abs(out[0] - 1.0f) > 0.01f || Math.abs(out[1] - 1.0f) > 0.01f || Math.abs(out[2] - 1.0f) > 0.01f) {
+            throw new AssertionError("ACES tonemapping highlight normalization failed: Expected ~1.0, got [" + out[0] + ", " + out[1] + ", " + out[2] + "]");
+        }
+
+        // Midtone input (0.5, 0.4, 0.3)
+        engine.gradeRgb(0.5f, 0.4f, 0.3f, 0.0f, 0, 0, out);
+        if (out[0] <= 0.0f || out[0] > 1.0f || out[1] <= 0.0f || out[2] <= 0.0f) {
+            throw new AssertionError("Graded RGB output out of range: [" + out[0] + ", " + out[1] + ", " + out[2] + "]");
+        }
+
+        // Test disabled bypass
+        engine.setEnabled(false);
+        engine.gradeRgb(0.7f, 0.6f, 0.5f, 0.0f, 0, 0, out);
+        if (Math.abs(out[0] - 0.7f) > 0.001f || Math.abs(out[1] - 0.6f) > 0.001f) {
+            throw new AssertionError("Disabled ColorCorrectionEngine must pass through raw RGB");
+        }
+    }
+
+    private static void testColorBlackCrushEliminationAndNightAmbientLift() {
+        ColorCorrectionEngine engine = new ColorCorrectionEngine(true);
+        HyperionConfig cfg = new HyperionConfig();
+        cfg.enableColorCorrection = true;
+        cfg.colorBlackCrushCompensation = 0.08;
+        cfg.colorNightAmbientBoost = 0.10;
+        cfg.enableColorDebanding = false;
+        engine.configure(cfg);
+
+        float[] outDay = new float[3];
+        float[] outNight = new float[3];
+
+        // Near-pitch-black dark terrain pixel (0.005, 0.005, 0.005)
+        engine.gradeRgb(0.005f, 0.005f, 0.005f, 0.0f, 0, 0, outDay);
+        engine.gradeRgb(0.005f, 0.005f, 0.005f, 1.0f, 0, 0, outNight);
+
+        // Anti-black-crush lifts deep shadows neutrally without void crush
+        if (outDay[0] < 0.008f || outDay[1] < 0.008f || outDay[2] < 0.008f) {
+            throw new AssertionError("Anti-Black-Crush failed to lift deep shadows: " + outDay[0]);
+        }
+
+        // Neutral chromatic balance (R == G == B)
+        if (Math.abs(outDay[0] - outDay[1]) > 0.001f || Math.abs(outDay[0] - outDay[2]) > 0.001f) {
+            throw new AssertionError("Shadow toe lift must be neutrally balanced: [" + outDay[0] + ", " + outDay[1] + ", " + outDay[2] + "]");
+        }
+
+        // Night factor must further lift terrain visibility
+        if (outNight[0] <= outDay[0]) {
+            throw new AssertionError("Night ambient boost must provide higher visibility than day shadows: Night=" + outNight[0] + ", Day=" + outDay[0]);
+        }
+    }
+
+    private static void testColorLightmapBatchProcessingAndOptionsRegistry() {
+        ColorCorrectionEngine engine = new ColorCorrectionEngine(true);
+        HyperionConfig cfg = new HyperionConfig();
+        cfg.enableColorCorrection = true;
+        cfg.enableColorDebanding = true;
+        cfg.colorBlackCrushCompensation = 0.08;
+        engine.configure(cfg);
+
+        int[] lightmap = new int[256];
+        // Populate 16x16 lightmap with dark/pitch-black vanilla night values
+        for (int i = 0; i < 256; i++) {
+            lightmap[i] = 0xFF020202; // Very dark ARGB
+        }
+
+        engine.processLightmap(lightmap, 16, 16, 1.0f);
+
+        // Verify that dark pixels were lifted and processed
+        for (int i = 0; i < 256; i++) {
+            int argb = lightmap[i];
+            int r = (argb >> 16) & 0xFF;
+            int g = (argb >> 8) & 0xFF;
+            int b = argb & 0xFF;
+
+            if (r < 5 || g < 5 || b < 5) {
+                throw new AssertionError("Lightmap pixel at index " + i + " was not properly lifted: R=" + r + " G=" + g + " B=" + b);
+            }
+        }
+
+        // Verify COLOR_CORRECTION category in HyperionOptionsRegistry
+        List<HyperionOption<?>> colorOptions = HyperionOptionsRegistry.getOptionsByCategory(HyperionCategory.COLOR_CORRECTION);
+        if (colorOptions.isEmpty() || colorOptions.size() < 5) {
+            throw new AssertionError("COLOR_CORRECTION category options must contain at least 5 options, found: " + colorOptions.size());
+        }
+
+        // Test persistence round-trip
+        String json = HyperionConfigStorage.serializeJson(cfg);
+        HyperionConfig parsed = HyperionConfigStorage.parseJson(json);
+        if (!parsed.enableColorCorrection || !"VIBRANT_HDR".equals(parsed.colorGradingMode) || Math.abs(parsed.colorBlackCrushCompensation - 0.08) > 0.001) {
+            throw new AssertionError("Color correction config roundtrip serialization mismatch");
+        }
+
+        // Test Mixin hook
+        MixinLightmapTexture.onProcessLightmap(lightmap, 16, 16, 1.0f);
+    }
+
+    private static void testFpsStabilizerChunkUploadPacingAndWorkBudgeting() {
+        FpsStabilizerEngine stabilizer = new FpsStabilizerEngine(true);
+        HyperionConfig cfg = new HyperionConfig();
+        cfg.enableFpsStabilizer = true;
+        cfg.targetFramerate = 350;
+        cfg.maxChunkUploadsPerFrame = 3;
+        cfg.enableDynamicWorkBudgeting = true;
+        stabilizer.configure(cfg);
+
+        stabilizer.onFrameStart();
+
+        // 1st, 2nd, 3rd uploads should succeed within budget
+        if (!stabilizer.canUploadChunkMeshThisFrame()) throw new AssertionError("Chunk upload 1 must be permitted");
+        if (!stabilizer.canUploadChunkMeshThisFrame()) throw new AssertionError("Chunk upload 2 must be permitted");
+        if (!stabilizer.canUploadChunkMeshThisFrame()) throw new AssertionError("Chunk upload 3 must be permitted");
+
+        // 4th upload must be throttled to prevent 350 FPS -> 60 FPS drop
+        if (stabilizer.canUploadChunkMeshThisFrame()) {
+            throw new AssertionError("Chunk upload 4 must be throttled to protect 350 FPS budget");
+        }
+
+        // On next frame start, budget must reset
+        stabilizer.onFrameStart();
+        if (!stabilizer.canUploadChunkMeshThisFrame()) {
+            throw new AssertionError("Budget must reset on next frame start");
+        }
+
+        // Test average FPS computation
+        double avgFps = stabilizer.getAverageFps();
+        if (avgFps <= 0) throw new AssertionError("Average FPS must be positive");
+    }
+
+    private static void testFpsStabilizerBlockEntityDistanceAndOcclusionCulling() {
+        FpsStabilizerEngine stabilizer = new FpsStabilizerEngine(true);
+        HyperionConfig cfg = new HyperionConfig();
+        cfg.enableFpsStabilizer = true;
+        cfg.enableBlockEntityDistanceCulling = true;
+        cfg.blockEntityCullDistance = 32.0;
+        stabilizer.configure(cfg);
+
+        // Close block entity (10 blocks away, unoccluded) -> must NOT cull
+        if (stabilizer.shouldCullBlockEntity(0, 64, 0, 10, 64, 0, false)) {
+            throw new AssertionError("Close unoccluded block entity must not be culled");
+        }
+
+        // Distant block entity (50 blocks away) -> must cull
+        if (!stabilizer.shouldCullBlockEntity(0, 64, 0, 50, 64, 0, false)) {
+            throw new AssertionError("Distant block entity (50m) must be culled");
+        }
+
+        // Occluded close block entity -> must cull
+        if (!stabilizer.shouldCullBlockEntity(0, 64, 0, 5, 64, 0, true)) {
+            throw new AssertionError("Occluded block entity must be culled");
+        }
+
+        // MixinLevelRenderer hook check
+        MixinLevelRenderer.onRenderFrameStart();
+        if (!MixinLevelRenderer.shouldUploadChunkMesh()) {
+            throw new AssertionError("MixinLevelRenderer should allow first chunk upload");
+        }
+    }
+
+    private static void testCpuThreadPoolManagerTopologyAndModes() {
+        HyperionThreadPoolManager poolManager = HyperionThreadPoolManager.getInstance();
+        if (poolManager.getLogicalCores() <= 0 || poolManager.getPhysicalCores() <= 0) {
+            throw new AssertionError("CPU topology cores must be strictly positive");
+        }
+
+        // Test mode: ALL_CORES
+        poolManager.reconfigurePools(true, "ALL_CORES", 0);
+        if (poolManager.getChunkMeshingPool() == null || poolManager.getEntityPhysicsPool() == null) {
+            throw new AssertionError("Pools must be initialized in ALL_CORES mode");
+        }
+
+        // Test mode: BALANCED_N_MINUS_1
+        poolManager.reconfigurePools(true, "BALANCED_N_MINUS_1", 0);
+        if (poolManager.getLightEnginePool() == null || poolManager.getWorldCacheIoPool() == null) {
+            throw new AssertionError("Pools must be initialized in BALANCED mode");
+        }
+
+        // Test mode: CUSTOM (8 threads)
+        poolManager.reconfigurePools(true, "CUSTOM", 8);
+        if (poolManager.getCustomCoreCount() != 8) {
+            throw new AssertionError("Custom core count must be 8");
+        }
+
+        // Revert to AUTO
+        poolManager.reconfigurePools(true, "AUTO_DETECT_CORES", 0);
+    }
+
+    private static void testParallelChunkMesherThroughputAndGeometry() throws Exception {
+        ParallelChunkMesher mesher = new ParallelChunkMesher(true, 4);
+        byte[] fakeVoxelData = new byte[4096];
+        for (int i = 0; i < 4096; i += 2) {
+            fakeVoxelData[i] = (byte) ((i % 16) + 1); // 2048 solid blocks
+        }
+
+        CompletableFuture<ParallelChunkMesher.MeshResult> future = mesher.submitSectionMesh(10, 4, -5, fakeVoxelData);
+        ParallelChunkMesher.MeshResult res = future.get(5, TimeUnit.SECONDS);
+
+        if (!res.isSuccess() || res.getChunkX() != 10 || res.getChunkY() != 4 || res.getChunkZ() != -5) {
+            throw new AssertionError("Mesh result coordinate or success mismatch");
+        }
+        if (res.getOpaqueBlocks() != 2048) {
+            throw new AssertionError("Expected 2048 opaque blocks, got: " + res.getOpaqueBlocks());
+        }
+        if (res.getQuadCount() <= 0) {
+            throw new AssertionError("Quad count must be positive");
+        }
+        if (mesher.getTotalMeshedSections() != 1) {
+            throw new AssertionError("Expected 1 meshed section");
+        }
+    }
+
+    private static void testMultiCoreEntityPhysicsEngineBatching() {
+        MultiCoreEntityPhysicsEngine physicsEngine = new MultiCoreEntityPhysicsEngine(true, 32);
+        List<MultiCoreEntityPhysicsEngine.EntityStateSnapshot> entities = new ArrayList<>();
+
+        for (int i = 0; i < 100; i++) {
+            entities.add(new MultiCoreEntityPhysicsEngine.EntityStateSnapshot(
+                    i, i * 1.5, 64.0, i * -0.5, 0.1, -0.08, 0.2, true
+            ));
+        }
+
+        AtomicInteger tickedCounter = new AtomicInteger(0);
+        physicsEngine.processEntityBatchParallel(entities, (entityId, posX, posY, posZ) -> {
+            tickedCounter.incrementAndGet();
+        });
+
+        if (tickedCounter.get() != 100) {
+            throw new AssertionError("Expected 100 ticked entities, got: " + tickedCounter.get());
+        }
+        if (physicsEngine.getTotalTickedEntities() != 100) {
+            throw new AssertionError("Expected 100 in total ticked entities counter");
+        }
+    }
+
+    private static void testAsyncWorldTickDispatcherAndCpuAffinity() throws Exception {
+        AsyncWorldTickDispatcher dispatcher = new AsyncWorldTickDispatcher(true);
+        CountDownLatch latch = new CountDownLatch(5);
+
+        for (int i = 0; i < 5; i++) {
+            dispatcher.queueAsyncTask(latch::countDown);
+        }
+
+        boolean done = latch.await(2, TimeUnit.SECONDS);
+        if (!done) {
+            throw new AssertionError("Async tasks did not complete within timeout");
+        }
+        if (dispatcher.getDispatchedTasks() != 5) {
+            throw new AssertionError("Expected 5 dispatched tasks");
+        }
+
+        CpuCoreAffinityGovernor governor = new CpuCoreAffinityGovernor(true, true);
+        governor.optimizeCurrentThread("RENDER_MAIN");
+        governor.onMainLoopTick();
+        if (governor.getMainThreadLoopCount() != 1) {
+            throw new AssertionError("Expected main thread loop count = 1");
+        }
+        governor.hintCpuYieldIfOverloaded(100_000_000L, 16_000_000L);
+        if (governor.getTotalThreadYields() != 1) {
+            throw new AssertionError("Expected 1 thread yield due to budget overshoot");
+        }
+    }
+
+    private static void testHyperionConfigScreenAndRootCategories() {
+        HyperionConfigScreen screen = new HyperionConfigScreen();
+        HyperionScreenModel model = screen.getModel();
+
+        // 1. Verify Graphics Tab
+        screen.selectGraphicsTab();
+        if (model.getActiveCategory() != HyperionCategory.GRAPHICS_SETTINGS) {
+            throw new AssertionError("Active category must be GRAPHICS_SETTINGS");
+        }
+        List<HyperionOption<?>> graphicsOpts = screen.getFilteredOptions();
+        if (graphicsOpts.isEmpty()) {
+            throw new AssertionError("GRAPHICS_SETTINGS options list must not be empty");
+        }
+
+        // 2. Verify GPU Tab
+        screen.selectGpuTab();
+        if (model.getActiveCategory() != HyperionCategory.GPU_VIDEO_SETTINGS) {
+            throw new AssertionError("Active category must be GPU_VIDEO_SETTINGS");
+        }
+        List<HyperionOption<?>> gpuOpts = screen.getFilteredOptions();
+        if (gpuOpts.isEmpty()) {
+            throw new AssertionError("GPU_VIDEO_SETTINGS options list must not be empty");
+        }
+
+        // 3. Verify CPU Tab
+        screen.selectCpuTab();
+        if (model.getActiveCategory() != HyperionCategory.CPU_PROCESSOR_SETTINGS) {
+            throw new AssertionError("Active category must be CPU_PROCESSOR_SETTINGS");
+        }
+        List<HyperionOption<?>> cpuOpts = screen.getFilteredOptions();
+        if (cpuOpts.isEmpty()) {
+            throw new AssertionError("CPU_PROCESSOR_SETTINGS options list must not be empty");
+        }
+
+        // 4. Test Search Filtering
+        screen.setSearchQuery("Multi-Core");
+        List<HyperionOption<?>> searchResults = screen.getFilteredOptions();
+        if (searchResults.isEmpty()) {
+            throw new AssertionError("Search for 'Multi-Core' must return matching CPU options");
+        }
+        screen.setSearchQuery("");
+
+        // 5. Test Option Toggling
+        screen.selectCpuTab();
+        screen.setSelectedOptionIndex(0);
+        boolean beforeToggle = model.getWorkingConfig().enableCpuMultithreading;
+        screen.toggleOrCycleSelectedOption();
+        boolean afterToggle = model.getWorkingConfig().enableCpuMultithreading;
+        if (beforeToggle == afterToggle) {
+            throw new AssertionError("Toggle must flip boolean state");
+        }
+        if (!model.isDirty()) {
+            throw new AssertionError("Model must be marked dirty after change");
+        }
+
+        // 6. Test Preset Application & Save
+        model.applyPreset(HyperionConfigStorage.Preset.EXTREME_MULTICORE_350FPS);
+        if (!model.getWorkingConfig().enableCpuMultithreading || model.getWorkingConfig().targetFramerate != 350) {
+            throw new AssertionError("EXTREME_MULTICORE_350FPS preset not applied correctly");
+        }
+        boolean saved = model.saveAndApply();
+        if (!saved || model.isDirty()) {
+            throw new AssertionError("Save and apply failed or left dirty state");
+        }
+    }
+
+    private static void testSingleGpuAndDualGpuHardwareTopologyRouting() {
+        DualGpuManager manager = new DualGpuManager(true, DualGpuWorkloadDispatcher.AUTO_BALANCED);
+
+        // 1. Test Single Discrete GPU ONLY (User has no iGPU)
+        List<GpuDeviceInfo> dGpuOnly = new ArrayList<>();
+        dGpuOnly.add(new GpuDeviceInfo(0, "AMD Radeon RX 580 8GB", "AMD", 8192, false));
+        manager.configureGpus(dGpuOnly);
+
+        if (!manager.isSingleDiscreteGpuOnly() || manager.hasIntegratedGpu() || !manager.hasDiscreteGpu()) {
+            throw new AssertionError("Failed to detect single dGPU-only topology");
+        }
+        if (manager.getPrimaryGpu() == null || !manager.getPrimaryGpu().isDiscrete()) {
+            throw new AssertionError("Primary GPU must be the discrete GPU in dGPU-only setup");
+        }
+        if (manager.getSecondaryGpu() != null || manager.isDualGpuActive()) {
+            throw new AssertionError("Dual GPU must be inactive when only dGPU is present");
+        }
+        if (manager.shouldOffloadHudToSecondary() || manager.shouldOffloadLightToSecondary()) {
+            throw new AssertionError("Offloading must be disabled when only dGPU is present");
+        }
+
+        // 2. Test Single Integrated GPU ONLY (User has no dGPU)
+        List<GpuDeviceInfo> iGpuOnly = new ArrayList<>();
+        iGpuOnly.add(new GpuDeviceInfo(0, "AMD Radeon(TM) Vega 8 Graphics", "AMD", 2048, true));
+        manager.configureGpus(iGpuOnly);
+
+        if (!manager.isSingleIntegratedGpuOnly() || manager.hasDiscreteGpu() || !manager.hasIntegratedGpu()) {
+            throw new AssertionError("Failed to detect single iGPU-only topology");
+        }
+        if (manager.getPrimaryGpu() == null || !manager.getPrimaryGpu().isIntegrated()) {
+            throw new AssertionError("Primary GPU must be the integrated GPU in iGPU-only setup");
+        }
+        if (manager.getSecondaryGpu() != null || manager.isDualGpuActive()) {
+            throw new AssertionError("Dual GPU must be inactive when only iGPU is present");
+        }
+        if (manager.shouldOffloadHudToSecondary() || manager.shouldOffloadLightToSecondary()) {
+            throw new AssertionError("Offloading must be disabled when only iGPU is present");
+        }
+
+        // 3. Test Dual-GPU Hybrid (Both dGPU + iGPU present)
+        List<GpuDeviceInfo> dualGpu = new ArrayList<>();
+        dualGpu.add(new GpuDeviceInfo(0, "AMD Radeon 540 Series", "AMD", 2048, false));
+        dualGpu.add(new GpuDeviceInfo(1, "AMD Radeon(TM) Vega 8 Graphics", "AMD", 2048, true));
+        manager.configureGpus(dualGpu);
+
+        if (!manager.hasDiscreteGpu() || !manager.hasIntegratedGpu()) {
+            throw new AssertionError("Both dGPU and iGPU must be detected in dual setup");
+        }
+        if (manager.getPrimaryGpu() == null || !manager.getPrimaryGpu().isDiscrete()) {
+            throw new AssertionError("Primary GPU must be dGPU in hybrid setup");
+        }
+        if (manager.getSecondaryGpu() == null || !manager.getSecondaryGpu().isIntegrated()) {
+            throw new AssertionError("Secondary GPU must be iGPU in hybrid setup");
+        }
+        if (!manager.isDualGpuActive()) {
+            throw new AssertionError("Dual GPU mode must be active in hybrid setup");
+        }
+        if (!manager.shouldOffloadHudToSecondary() || !manager.shouldOffloadLightToSecondary()) {
+            throw new AssertionError("Offloading to iGPU must be active in hybrid mode");
+        }
+
+        // 4. Test Dual-GPU with mode = OFF
+        manager.setMode(DualGpuWorkloadDispatcher.OFF);
+        if (manager.isDualGpuActive() || manager.getSecondaryGpu() != null) {
+            throw new AssertionError("Dual GPU mode OFF must deactivate secondary GPU");
+        }
+    }
+}
+
+

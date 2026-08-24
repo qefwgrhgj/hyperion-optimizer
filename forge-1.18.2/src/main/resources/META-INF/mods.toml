@@ -1,0 +1,24 @@
+modLoader="javafml"
+loaderVersion="[40,)"
+license="LGPL-3.0-only"
+
+[[mods]]
+modId="hyperion"
+version="1.0.0"
+displayName="Hyperion Optimizer"
+description='''High-Performance Sovereign Multi-Core Cross-Platform Minecraft Optimization Engine.'''
+authors="Hyperion Team"
+
+[[dependencies.hyperion]]
+    modId="forge"
+    type="required"
+    versionRange="[40.0.0,)"
+    ordering="NONE"
+    side="BOTH"
+
+[[dependencies.hyperion]]
+    modId="minecraft"
+    type="required"
+    versionRange="[1.18,1.19)"
+    ordering="NONE"
+    side="BOTH"
