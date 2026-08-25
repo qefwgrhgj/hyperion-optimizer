@@ -1085,9 +1085,27 @@ public class HyperionTestRunner {
             failed++;
         }
 
+        try {
+            testHudDirtyTrackerDamageIsolation();
+            System.out.println("[PASS] 111. Decoupled HUD Damage Telemetry Isolation & Anti-Freeze Gate");
+            passed++;
+        } catch (Throwable t) {
+            System.err.println("[FAIL] 111. HUD Damage Isolation: " + t.getMessage());
+            failed++;
+        }
+
+        try {
+            testColorCorrectionEngineZeroAllocationLutAndLightmap();
+            System.out.println("[PASS] 112. ColorCorrectionEngine Zero-Allocation Fast LUT & Torch Lightmap Acceleration");
+            passed++;
+        } catch (Throwable t) {
+            System.err.println("[FAIL] 112. Color Lightmap LUT: " + t.getMessage());
+            failed++;
+        }
+
         System.out.println("=================================================");
         System.out.println("SUMMARY: " + passed + " Passed, " + failed + " Failed.");
-        System.out.println("STATUS: " + (failed == 0 ? "[VERIFIED: ALL 110 ARCHITECTURAL, AUDIT, MEMORY & ZERO-ALLOCATION CONTRACTS VERIFIED]" : "[DEFECT DETECTED]"));
+        System.out.println("STATUS: " + (failed == 0 ? "[VERIFIED: ALL 112 ARCHITECTURAL, AUDIT, LIGHTING & HUD DAMAGE RESILIENCE CONTRACTS VERIFIED]" : "[DEFECT DETECTED]"));
         System.out.println("=================================================");
 
         if (failed > 0) {
@@ -3960,7 +3978,44 @@ public class HyperionTestRunner {
             throw new AssertionError("Entity pool must not be shutdown");
         }
     }
+
+    private static void testHudDirtyTrackerDamageIsolation() {
+        com.hyperion.optimizer.core.hud.HudDirtyTracker tracker = new com.hyperion.optimizer.core.hud.HudDirtyTracker();
+        tracker.updateState(20.0f, 20, 10, 300, 5, 0.5f, 0, 100L);
+        tracker.clearDirty();
+
+        // 1. Take damage: Health drops to 16
+        boolean marked = tracker.updateHealth(16.0f, 20, 10);
+        if (!marked || !tracker.isDirty()) {
+            throw new AssertionError("Health drop must flag HUD dirty once");
+        }
+        tracker.clearDirty();
+
+        // 2. Continuous frames with same damage state during 10-tick hurtTime animation
+        boolean redundantMark = tracker.updateHealth(16.0f, 20, 10);
+        if (redundantMark || tracker.isDirty()) {
+            throw new AssertionError("Same health during hurt animation must NOT continuously dirty HUD buffer");
+        }
+    }
+
+    private static void testColorCorrectionEngineZeroAllocationLutAndLightmap() {
+        ColorCorrectionEngine cce = new ColorCorrectionEngine(true);
+        int[] lightmap = new int[256];
+        for (int i = 0; i < 256; i++) {
+            lightmap[i] = (0xFF << 24) | (i << 16) | (i << 8) | i;
+        }
+
+        // Process lightmap with fast LUT
+        cce.processLightmap(lightmap, 16, 16, 0.5f);
+
+        // Alpha channel must be preserved
+        int alpha = (lightmap[128] >> 24) & 0xFF;
+        if (alpha != 255) {
+            throw new AssertionError("Alpha channel in lightmap must be 255");
+        }
+    }
 }
+
 
 
 

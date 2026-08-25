@@ -17,7 +17,7 @@ public class HudDirtyTracker {
     public synchronized boolean updateState(float health, int hunger, int armor, int air, int expLevel, float expProgress, int selectedSlot, long chatTick) {
         if (health != lastHealth || hunger != lastHunger || armor != lastArmor ||
             air != lastAir || expLevel != lastExperienceLevel || expProgress != lastExperienceProgress ||
-            selectedSlot != lastSelectedSlot || chatTick != lastChatUpdateTick) {
+            selectedSlot != lastSelectedSlot || (chatTick >= 0 && chatTick != lastChatUpdateTick)) {
             
             this.lastHealth = health;
             this.lastHunger = hunger;
@@ -26,6 +26,26 @@ public class HudDirtyTracker {
             this.lastExperienceLevel = expLevel;
             this.lastExperienceProgress = expProgress;
             this.lastSelectedSlot = selectedSlot;
+            if (chatTick >= 0) this.lastChatUpdateTick = chatTick;
+            this.dirty = true;
+            return true;
+        }
+        return false;
+    }
+
+    public synchronized boolean updateHealth(float health, int hunger, int armor) {
+        if (health != lastHealth || hunger != lastHunger || armor != lastArmor) {
+            this.lastHealth = health;
+            this.lastHunger = hunger;
+            this.lastArmor = armor;
+            this.dirty = true;
+            return true;
+        }
+        return false;
+    }
+
+    public synchronized boolean updateChat(long chatTick) {
+        if (chatTick >= 0 && chatTick != lastChatUpdateTick) {
             this.lastChatUpdateTick = chatTick;
             this.dirty = true;
             return true;

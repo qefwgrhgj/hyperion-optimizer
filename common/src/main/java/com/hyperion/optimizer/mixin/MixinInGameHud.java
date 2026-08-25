@@ -15,7 +15,7 @@ public class MixinInGameHud {
     public static void onPlayerDamage(float health, int foodLevel, int armor) {
         DecoupledHudManager hudManager = HyperionEngine.getInstance().getHudManager();
         if (hudManager != null && hudManager.isEnabled()) {
-            hudManager.getDirtyTracker().updateState(health, foodLevel, armor, 0, 0, 0f, 0, System.currentTimeMillis());
+            hudManager.getDirtyTracker().updateHealth(health, foodLevel, armor);
         }
     }
 }

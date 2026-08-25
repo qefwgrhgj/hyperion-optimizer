@@ -42,12 +42,17 @@ public final class ColorCorrectionEngine {
     private volatile float cachedTempG = 1.0f;
     private volatile float cachedTempB = 1.0f;
 
+    // Fast 256-entry Gamma LUT to eliminate Math.pow in per-frame lightmap processing
+    private final float[] gammaLut = new float[256];
+    private static final ThreadLocal<float[]> TEMP_RGB = ThreadLocal.withInitial(() -> new float[3]);
+
     // Normalization constant so ACES(1.0) == 1.0 (2.54 / 3.16)
     private static final float ACES_NORM_FACTOR = 0.8037974683544302f;
 
     public ColorCorrectionEngine(boolean enabled) {
         this.enabled = enabled;
         recomputeColorTemperature();
+        recomputeGammaLut();
     }
 
     public void configure(HyperionConfig config) {
@@ -69,6 +74,7 @@ public final class ColorCorrectionEngine {
         this.colorTemperature = config.colorTemperature;
         this.debanding = config.enableColorDebanding;
         recomputeColorTemperature();
+        recomputeGammaLut();
     }
 
     /**
@@ -143,17 +149,29 @@ public final class ColorCorrectionEngine {
         g = gradedLum + (g - gradedLum) * totalSat;
         b = gradedLum + (b - gradedLum) * totalSat;
 
-        // 7. Gamma Power Correction
+        // 7. Fast LUT Gamma Power Correction (Zero Math.pow CPU spike)
         if (gammaBoost > 0.01f && gammaBoost != 1.0f) {
-            float invGamma = 1.0f / gammaBoost;
-            r = (float) Math.pow(Math.max(0.0f, r), invGamma);
-            g = (float) Math.pow(Math.max(0.0f, g), invGamma);
-            b = (float) Math.pow(Math.max(0.0f, b), invGamma);
+            r = fastGamma(r);
+            g = fastGamma(g);
+            b = fastGamma(b);
         }
 
         outRgb[0] = clamp01(r);
         outRgb[1] = clamp01(g);
         outRgb[2] = clamp01(b);
+    }
+
+    private void recomputeGammaLut() {
+        float invGamma = (gammaBoost > 0.01f && gammaBoost != 1.0f) ? (1.0f / gammaBoost) : 1.0f;
+        for (int i = 0; i < 256; i++) {
+            gammaLut[i] = (float) Math.pow(i / 255.0f, invGamma);
+        }
+    }
+
+    private float fastGamma(float val) {
+        if (gammaBoost <= 0.01f || gammaBoost == 1.0f) return val;
+        int idx = Math.min(255, Math.max(0, (int) (val * 255.0f + 0.5f)));
+        return gammaLut[idx];
     }
 
     private void recomputeColorTemperature() {
@@ -187,11 +205,11 @@ public final class ColorCorrectionEngine {
 
     /**
      * Fast in-place transformation of Minecraft's 16x16 (256 elements) ARGB Lightmap.
-     * Zero allocations during per-frame light ticks.
+     * 100% Zero allocations & SIMD-friendly LUT execution.
      */
     public void processLightmap(int[] lightmapPixels, int width, int height, float nightFactor) {
         if (!enabled || lightmapPixels == null) return;
-        float[] temp = new float[3];
+        float[] temp = TEMP_RGB.get();
 
         for (int y = 0; y < height; y++) {
             for (int x = 0; x < width; x++) {
