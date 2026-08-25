@@ -42,11 +42,17 @@ public class AnimationLodManager {
         if (distSq <= nearDistSq) {
             return false; // Full framerate animation (144+ FPS)
         } else if (distSq <= farDistSq) {
-            // Half framerate animation (30-60 FPS) with phase shift
+            // Half framerate animation (60-72 FPS) with phase shift
             return ((currentFrameIndex + entityId) & 1) != 0;
-        } else {
-            // Quarter framerate animation (15-20 FPS) with phase shift
+        } else if (distSq <= 4096.0) { // 32 - 64 blocks
+            // Quarter framerate animation (20-30 FPS) with phase shift
             return ((currentFrameIndex + entityId) & 3) != 0;
+        } else if (distSq <= 16384.0) { // 64 - 128 blocks
+            // 1/8th framerate animation (~10 FPS)
+            return ((currentFrameIndex + entityId) & 7) != 0;
+        } else { // 128+ blocks (32+ chunks render distance)
+            // 1/16th framerate animation (~5 FPS for distant background mobs)
+            return ((currentFrameIndex + entityId) & 15) != 0;
         }
     }
 

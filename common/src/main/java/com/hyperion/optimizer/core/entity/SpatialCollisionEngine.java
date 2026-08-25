@@ -55,6 +55,15 @@ public class SpatialCollisionEngine {
         }
     }
 
+    public void registerEntity(CollidableEntity entity, double camX, double camZ) {
+        if (!enabled || entity == null) return;
+        double dx = entity.x - camX;
+        double dz = entity.z - camZ;
+        // Distant mobs (> 64 blocks) at 32 chunks never collide with near players/blocks
+        if (dx * dx + dz * dz > 4096.0) return;
+        registerEntity(entity);
+    }
+
     public void registerEntity(CollidableEntity entity) {
         if (!enabled || entity == null) return;
         entity.collisionCheckCount = 0;

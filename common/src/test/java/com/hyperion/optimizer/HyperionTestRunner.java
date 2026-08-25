@@ -1112,9 +1112,18 @@ public class HyperionTestRunner {
             failed++;
         }
 
+        try {
+            testExtremeChunkDistanceMobAiAndSpatialPruning();
+            System.out.println("[PASS] 114. Extreme Chunk Distance (32+ Chunks) Mob AI Pacing & Distance-Gated Spatial Culling");
+            passed++;
+        } catch (Throwable t) {
+            System.err.println("[FAIL] 114. 32-Chunk Mob AI & Spatial Culling: " + t.getMessage());
+            failed++;
+        }
+
         System.out.println("=================================================");
         System.out.println("SUMMARY: " + passed + " Passed, " + failed + " Failed.");
-        System.out.println("STATUS: " + (failed == 0 ? "[VERIFIED: ALL 113 ARCHITECTURAL, AUDIT, RESPAWN & PERFORMANCE CONTRACTS VERIFIED]" : "[DEFECT DETECTED]"));
+        System.out.println("STATUS: " + (failed == 0 ? "[VERIFIED: ALL 114 ARCHITECTURAL, AUDIT, RESPAWN & 32-CHUNK MOB OPTIMIZATION CONTRACTS VERIFIED]" : "[DEFECT DETECTED]"));
         System.out.println("=================================================");
 
         if (failed > 0) {
@@ -4042,7 +4051,49 @@ public class HyperionTestRunner {
             }
         }
     }
+
+    private static void testExtremeChunkDistanceMobAiAndSpatialPruning() {
+        // 1. Mob AI Pacing at extreme distances (32+ chunks = 128+ to 512+ blocks)
+        com.hyperion.optimizer.core.ai.MobAiOptimizer mobAi = new com.hyperion.optimizer.core.ai.MobAiOptimizer(true);
+        int intervalNear = mobAi.getTargetAcquisitionInterval(5.0);
+        int intervalExtreme = mobAi.getTargetAcquisitionInterval(200.0);
+
+        if (intervalNear != 1) {
+            throw new AssertionError("Close mob (<8m) must scan every tick, got: " + intervalNear);
+        }
+        if (intervalExtreme != 100) {
+            throw new AssertionError("Distant mob (>128m) at 32 chunks must scan once every 100 ticks (5s), got: " + intervalExtreme);
+        }
+
+        // 2. Spatial Collision Grid Distance-Gated Pruning
+        com.hyperion.optimizer.core.entity.SpatialCollisionEngine spatialEngine =
+            new com.hyperion.optimizer.core.entity.SpatialCollisionEngine(true, 8, 32.0);
+        spatialEngine.onTickStart();
+
+        // Register distant mob at (500, 64, 500) with camera at (0, 0) -> must be pruned
+        com.hyperion.optimizer.core.entity.SpatialCollisionEngine.CollidableEntity distantMob =
+            new com.hyperion.optimizer.core.entity.SpatialCollisionEngine.CollidableEntity(101, 500.0, 64.0, 500.0, 0.6, 1.8);
+        spatialEngine.registerEntity(distantMob, 0.0, 0.0);
+
+        java.util.List<com.hyperion.optimizer.core.entity.SpatialCollisionEngine.CollidableEntity> candidates =
+            spatialEngine.getNearbyCandidates(500.0, 500.0);
+        if (!candidates.isEmpty()) {
+            throw new AssertionError("Distant mobs (>64m) must not pollute spatial collision grid at 32 chunks");
+        }
+
+        // Register near mob at (5, 64, 5) -> must be registered
+        com.hyperion.optimizer.core.entity.SpatialCollisionEngine.CollidableEntity nearMob =
+            new com.hyperion.optimizer.core.entity.SpatialCollisionEngine.CollidableEntity(102, 5.0, 64.0, 5.0, 0.6, 1.8);
+        spatialEngine.registerEntity(nearMob, 0.0, 0.0);
+
+        java.util.List<com.hyperion.optimizer.core.entity.SpatialCollisionEngine.CollidableEntity> nearCandidates =
+            spatialEngine.getNearbyCandidates(5.0, 5.0);
+        if (nearCandidates.isEmpty()) {
+            throw new AssertionError("Near mobs must be registered in spatial collision grid");
+        }
+    }
 }
+
 
 
 
