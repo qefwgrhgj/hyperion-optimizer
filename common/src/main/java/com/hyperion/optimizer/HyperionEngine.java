@@ -687,4 +687,33 @@ public final class HyperionEngine {
     public com.hyperion.optimizer.core.animation.PalladiumCapabilityCache getPalladiumCache() {
         return palladiumCache;
     }
+
+    public com.hyperion.optimizer.core.gpu.dualgpu.DualGpuThermalFallback getThermalFallback() {
+        return dualGpuManager != null ? dualGpuManager.getThermalFallback() : null;
+    }
+
+    /**
+     * Handles player respawn or long-distance dimension teleport.
+     * Flushes stale cave data, resets fallback states, and triggers warm-up grace period.
+     */
+    public void onPlayerRespawnOrTeleport() {
+        if (dualGpuManager != null && dualGpuManager.getThermalFallback() != null) {
+            dualGpuManager.getThermalFallback().onRespawnOrTeleport();
+        }
+        if (hudManager != null) {
+            hudManager.onPlayerRespawn();
+        }
+        if (collisionEngine != null) {
+            collisionEngine.clearGrid();
+        }
+        if (badOptimizationsEngine != null) {
+            badOptimizationsEngine.invalidateBiomeCaches();
+        }
+        if (palladiumCache != null) {
+            palladiumCache.reset();
+        }
+        if (chestBaker != null) {
+            chestBaker.clear();
+        }
+    }
 }

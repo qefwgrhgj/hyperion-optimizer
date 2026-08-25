@@ -12,4 +12,8 @@ public class MixinClientPlayNetworkHandler {
         }
         return false;
     }
+
+    public static void onPlayerRespawn() {
+        HyperionEngine.getInstance().onPlayerRespawnOrTeleport();
+    }
 }

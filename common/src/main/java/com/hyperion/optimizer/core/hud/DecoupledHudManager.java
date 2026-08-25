@@ -25,6 +25,14 @@ public class DecoupledHudManager {
         }
     }
 
+    public void onPlayerRespawn() {
+        this.isFramebufferValid = false;
+        this.lastRenderTimeNanos = 0L;
+        if (dirtyTracker != null) {
+            dirtyTracker.clearDirty();
+        }
+    }
+
     public boolean shouldRepaintHud(long currentTimeNanos) {
         if (!enabled) return true;
 

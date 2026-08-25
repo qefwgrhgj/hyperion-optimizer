@@ -1103,9 +1103,18 @@ public class HyperionTestRunner {
             failed++;
         }
 
+        try {
+            testPlayerRespawnTeleportAndThermalGraceWarmup();
+            System.out.println("[PASS] 113. Player Respawn/Teleport State Invalidation & Dual-GPU Warmup Grace Period");
+            passed++;
+        } catch (Throwable t) {
+            System.err.println("[FAIL] 113. Respawn Warmup Grace: " + t.getMessage());
+            failed++;
+        }
+
         System.out.println("=================================================");
         System.out.println("SUMMARY: " + passed + " Passed, " + failed + " Failed.");
-        System.out.println("STATUS: " + (failed == 0 ? "[VERIFIED: ALL 112 ARCHITECTURAL, AUDIT, LIGHTING & HUD DAMAGE RESILIENCE CONTRACTS VERIFIED]" : "[DEFECT DETECTED]"));
+        System.out.println("STATUS: " + (failed == 0 ? "[VERIFIED: ALL 113 ARCHITECTURAL, AUDIT, RESPAWN & PERFORMANCE CONTRACTS VERIFIED]" : "[DEFECT DETECTED]"));
         System.out.println("=================================================");
 
         if (failed > 0) {
@@ -3353,9 +3362,10 @@ public class HyperionTestRunner {
             }
         }
 
-        // Severe thermal throttling spikes (>40ms) -> must trigger fallback on 3rd spike
-        fallback.recordFrameAndEvaluate(55.0);
-        fallback.recordFrameAndEvaluate(60.0);
+        // Severe thermal throttling spikes (>40ms) -> must trigger fallback on 10th spike
+        for (int i = 0; i < 9; i++) {
+            fallback.recordFrameAndEvaluate(55.0);
+        }
         boolean active = fallback.recordFrameAndEvaluate(75.0);
         if (!active || !fallback.isFallbackActive()) {
             throw new AssertionError("Consecutive thermal spikes must activate safe auto-fallback mode");
@@ -4014,7 +4024,26 @@ public class HyperionTestRunner {
             throw new AssertionError("Alpha channel in lightmap must be 255");
         }
     }
+
+    private static void testPlayerRespawnTeleportAndThermalGraceWarmup() {
+        HyperionEngine engine = HyperionEngine.getInstance();
+        engine.onPlayerRespawnOrTeleport();
+
+        com.hyperion.optimizer.core.gpu.dualgpu.DualGpuThermalFallback fallback = engine.getThermalFallback();
+        if (fallback != null) {
+            // Must not be active after respawn
+            if (fallback.isFallbackActive()) {
+                throw new AssertionError("Fallback must not be active immediately after respawn reset");
+            }
+            // Burst frame time spike during respawn chunk load must NOT trip fallback due to 6s grace period
+            boolean active = fallback.recordFrameAndEvaluate(100.0);
+            if (active) {
+                throw new AssertionError("Chunk loading frame spike during respawn must be protected by warmup grace period");
+            }
+        }
+    }
 }
+
 
 
 

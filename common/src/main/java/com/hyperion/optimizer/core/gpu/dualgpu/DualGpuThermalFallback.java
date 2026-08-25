@@ -20,9 +20,9 @@ public final class DualGpuThermalFallback {
     private static final Logger LOGGER = Logger.getLogger("Hyperion-ThermalFallback");
 
     private volatile boolean enabled = true;
-    private volatile double frametimeThresholdMs = 40.0; // 40ms = 25 FPS threshold
-    private volatile int consecutiveSpikesBeforeFallback = 3;
-    private volatile int recoveryFramesRequired = 120; // 2 seconds of stable 60+ FPS to recover
+    private volatile double frametimeThresholdMs = 66.6; // 66.6ms = 15 FPS threshold (prevents false triggers on chunk loads)
+    private volatile int consecutiveSpikesBeforeFallback = 10; // 10 consecutive frames required
+    private volatile int recoveryFramesRequired = 30; // 30 stable frames (~0.5s) to recover
 
     private final AtomicBoolean fallbackActive = new AtomicBoolean(false);
     private int consecutiveSpikeCount = 0;
@@ -39,12 +39,19 @@ public final class DualGpuThermalFallback {
     public void configure(HyperionConfig config) {
         if (config == null) return;
         this.enabled = config.enableDualGpuThermalFallback;
-        this.frametimeThresholdMs = Math.max(16.6, config.thermalFallbackFrametimeThresholdMs);
+        this.frametimeThresholdMs = Math.max(33.3, config.thermalFallbackFrametimeThresholdMs);
     }
 
     public synchronized void triggerWarmupGracePeriod(long graceDurationMs) {
         this.warmupGraceUntilMs = System.currentTimeMillis() + Math.max(1000L, graceDurationMs);
         this.consecutiveSpikeCount = 0;
+    }
+
+    public synchronized void onRespawnOrTeleport() {
+        this.fallbackActive.set(false);
+        this.consecutiveSpikeCount = 0;
+        this.consecutiveStableCount = 0;
+        this.warmupGraceUntilMs = System.currentTimeMillis() + 6000L; // 6s grace period
     }
 
     /**
