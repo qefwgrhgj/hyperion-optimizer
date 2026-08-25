@@ -9,19 +9,24 @@ public class PacketFlushConsolidator {
     private final ConcurrentHashMap<Object, AtomicInteger> channelPendingFlushes = new ConcurrentHashMap<>();
     private final AtomicInteger defaultPendingFlushes = new AtomicInteger(0);
 
+    public static final int MAX_PENDING_SAFETY_CEILING = 10000;
+
     public PacketFlushConsolidator(boolean enabled) {
         this.enabled = enabled;
     }
 
     public boolean shouldConsolidateFlush(int currentPendingCount, int maxBatchSize) {
         if (!enabled) return false;
-        // Consolidate flushes if batch hasn't reached threshold
+        // Bounded queue safety: if pending count exceeds safety ceiling, force flush immediately
+        if (currentPendingCount >= MAX_PENDING_SAFETY_CEILING) return false;
         return currentPendingCount < maxBatchSize;
     }
 
     public boolean shouldConsolidateFlush(Object channelKey, int maxBatchSize) {
         if (!enabled) return false;
-        return getPending(channelKey) < maxBatchSize;
+        int pending = getPending(channelKey);
+        if (pending >= MAX_PENDING_SAFETY_CEILING) return false;
+        return pending < maxBatchSize;
     }
 
     public int incrementPending(Object channelKey) {

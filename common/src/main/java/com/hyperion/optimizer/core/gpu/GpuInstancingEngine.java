@@ -95,4 +95,9 @@ public final class GpuInstancingEngine {
         totalBatchesDispatched.set(0);
         totalInstancesRendered.set(0);
     }
+
+    public synchronized void freeDirectBuffers() {
+        reset();
+        com.hyperion.optimizer.core.memory.DirectMemoryCleaner.freeDirectBuffer(instanceDataBuffer);
+    }
 }

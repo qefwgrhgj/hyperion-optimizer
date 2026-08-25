@@ -12,10 +12,17 @@ public class DecoupledHudManager {
 
     public DecoupledHudManager(boolean enabled, int targetFps, boolean dynamicRefresh) {
         this.enabled = enabled;
-        this.targetFps = Math.max(15, Math.min(240, targetFps));
+        this.targetFps = Math.max(15, Math.min(360, targetFps));
         this.dynamicRefresh = dynamicRefresh;
         this.dirtyTracker = new HudDirtyTracker();
         this.frameIntervalNanos = 1_000_000_000L / this.targetFps;
+    }
+
+    public void onResolutionChanged() {
+        this.isFramebufferValid = false;
+        if (dirtyTracker != null) {
+            dirtyTracker.markDirty();
+        }
     }
 
     public boolean shouldRepaintHud(long currentTimeNanos) {

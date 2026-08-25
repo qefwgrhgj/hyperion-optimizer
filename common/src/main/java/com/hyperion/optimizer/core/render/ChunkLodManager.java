@@ -1,7 +1,7 @@
 package com.hyperion.optimizer.core.render;
 
 import com.hyperion.optimizer.api.HyperionConfig;
-import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.LongAdder;
 
 /**
  * 🏔️ Chunk LOD (Level of Detail) & Geometry Simplification Engine.
@@ -18,10 +18,10 @@ public final class ChunkLodManager {
     private volatile double lodFarDistanceThresholdBlocks = 48.0;
     private volatile double lodSimplificationFactor = 0.50;
 
-    private final AtomicLong lod0SectionsProcessed = new AtomicLong(0);
-    private final AtomicLong lod1SectionsProcessed = new AtomicLong(0);
-    private final AtomicLong lod2SectionsProcessed = new AtomicLong(0);
-    private final AtomicLong totalSavedVertices = new AtomicLong(0);
+    private final LongAdder lod0SectionsProcessed = new LongAdder();
+    private final LongAdder lod1SectionsProcessed = new LongAdder();
+    private final LongAdder lod2SectionsProcessed = new LongAdder();
+    private final LongAdder totalSavedVertices = new LongAdder();
 
     public ChunkLodManager(boolean enabled) {
         this.enabled = enabled;
@@ -48,13 +48,13 @@ public final class ChunkLodManager {
         double farThresholdSq = lodFarDistanceThresholdBlocks * lodFarDistanceThresholdBlocks;
 
         if (distSq <= nearThresholdSq) {
-            lod0SectionsProcessed.incrementAndGet();
+            lod0SectionsProcessed.increment();
             return 0;
         } else if (distSq <= farThresholdSq) {
-            lod1SectionsProcessed.incrementAndGet();
+            lod1SectionsProcessed.increment();
             return 1;
         } else {
-            lod2SectionsProcessed.incrementAndGet();
+            lod2SectionsProcessed.increment();
             return 2;
         }
     }
@@ -72,7 +72,7 @@ public final class ChunkLodManager {
         }
 
         long saved = (long) (rawQuadCount - simplified) * 4L;
-        totalSavedVertices.addAndGet(saved);
+        totalSavedVertices.add(saved);
         return simplified;
     }
 
@@ -86,15 +86,15 @@ public final class ChunkLodManager {
     public double getLodDistanceThresholdBlocks() { return lodDistanceThresholdBlocks; }
     public double getLodFarDistanceThresholdBlocks() { return lodFarDistanceThresholdBlocks; }
     public double getLodSimplificationFactor() { return lodSimplificationFactor; }
-    public long getLod0SectionsProcessed() { return lod0SectionsProcessed.get(); }
-    public long getLod1SectionsProcessed() { return lod1SectionsProcessed.get(); }
-    public long getLod2SectionsProcessed() { return lod2SectionsProcessed.get(); }
-    public long getTotalSavedVertices() { return totalSavedVertices.get(); }
+    public long getLod0SectionsProcessed() { return lod0SectionsProcessed.sum(); }
+    public long getLod1SectionsProcessed() { return lod1SectionsProcessed.sum(); }
+    public long getLod2SectionsProcessed() { return lod2SectionsProcessed.sum(); }
+    public long getTotalSavedVertices() { return totalSavedVertices.sum(); }
 
     public void reset() {
-        lod0SectionsProcessed.set(0);
-        lod1SectionsProcessed.set(0);
-        lod2SectionsProcessed.set(0);
-        totalSavedVertices.set(0);
+        lod0SectionsProcessed.reset();
+        lod1SectionsProcessed.reset();
+        lod2SectionsProcessed.reset();
+        totalSavedVertices.reset();
     }
 }

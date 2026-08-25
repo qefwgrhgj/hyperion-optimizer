@@ -1,7 +1,7 @@
 package com.hyperion.optimizer.core.render;
 
 import com.hyperion.optimizer.api.HyperionConfig;
-import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.LongAdder;
 
 /**
  * ✂️ Aggressive Face Culling Engine.
@@ -14,8 +14,8 @@ public final class AggressiveFaceCuller {
     private volatile boolean enabled = true;
     private volatile boolean enableInternalCavityCulling = true;
 
-    private final AtomicLong totalFacesEvaluated = new AtomicLong(0);
-    private final AtomicLong totalFacesCulled = new AtomicLong(0);
+    private final LongAdder totalFacesEvaluated = new LongAdder();
+    private final LongAdder totalFacesCulled = new LongAdder();
 
     public AggressiveFaceCuller(boolean enabled) {
         this.enabled = enabled;
@@ -37,7 +37,7 @@ public final class AggressiveFaceCuller {
      * @return true if the face is visible and must be meshed, false if it can be aggressively culled.
      */
     public boolean shouldRenderFace(int faceDir, byte currentBlockId, byte neighborBlockId, boolean neighborOpaque) {
-        totalFacesEvaluated.incrementAndGet();
+        totalFacesEvaluated.increment();
 
         if (!enabled) {
             // Standard vanilla logic: render face only if neighbor is not opaque
@@ -46,13 +46,13 @@ public final class AggressiveFaceCuller {
 
         // 1. If neighbor is opaque solid block, face is 100% buried and never visible
         if (neighborOpaque) {
-            totalFacesCulled.incrementAndGet();
+            totalFacesCulled.increment();
             return false;
         }
 
         // 2. Same translucent block type boundary (e.g. water next to water, glass next to glass)
         if (currentBlockId == neighborBlockId && currentBlockId != 0) {
-            totalFacesCulled.incrementAndGet();
+            totalFacesCulled.increment();
             return false;
         }
 
@@ -99,17 +99,17 @@ public final class AggressiveFaceCuller {
 
     public boolean isEnabled() { return enabled; }
     public boolean isInternalCavityCullingEnabled() { return enableInternalCavityCulling; }
-    public long getTotalFacesEvaluated() { return totalFacesEvaluated.get(); }
-    public long getTotalFacesCulled() { return totalFacesCulled.get(); }
+    public long getTotalFacesEvaluated() { return totalFacesEvaluated.sum(); }
+    public long getTotalFacesCulled() { return totalFacesCulled.sum(); }
 
     public double getCullRatio() {
-        long eval = totalFacesEvaluated.get();
+        long eval = totalFacesEvaluated.sum();
         if (eval == 0) return 0.0;
-        return (double) totalFacesCulled.get() / (double) eval;
+        return (double) totalFacesCulled.sum() / (double) eval;
     }
 
     public void reset() {
-        totalFacesEvaluated.set(0);
-        totalFacesCulled.set(0);
+        totalFacesEvaluated.reset();
+        totalFacesCulled.reset();
     }
 }

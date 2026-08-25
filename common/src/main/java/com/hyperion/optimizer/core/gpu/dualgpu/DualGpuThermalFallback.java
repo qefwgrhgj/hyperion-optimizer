@@ -27,6 +27,7 @@ public final class DualGpuThermalFallback {
     private final AtomicBoolean fallbackActive = new AtomicBoolean(false);
     private int consecutiveSpikeCount = 0;
     private int consecutiveStableCount = 0;
+    private long warmupGraceUntilMs = 0L;
 
     private final AtomicLong fallbackTriggeredCount = new AtomicLong(0);
     private final AtomicLong recoveryTriggeredCount = new AtomicLong(0);
@@ -41,6 +42,11 @@ public final class DualGpuThermalFallback {
         this.frametimeThresholdMs = Math.max(16.6, config.thermalFallbackFrametimeThresholdMs);
     }
 
+    public synchronized void triggerWarmupGracePeriod(long graceDurationMs) {
+        this.warmupGraceUntilMs = System.currentTimeMillis() + Math.max(1000L, graceDurationMs);
+        this.consecutiveSpikeCount = 0;
+    }
+
     /**
      * Records frametime of current frame and adjusts fallback state.
      *
@@ -49,6 +55,11 @@ public final class DualGpuThermalFallback {
      */
     public synchronized boolean recordFrameAndEvaluate(double frameTimeMs) {
         if (!enabled) return false;
+
+        // Skip thermal fallback trigger during initial world/dimension warmup grace period
+        if (System.currentTimeMillis() < warmupGraceUntilMs) {
+            return fallbackActive.get();
+        }
 
         if (frameTimeMs > frametimeThresholdMs) {
             consecutiveSpikeCount++;

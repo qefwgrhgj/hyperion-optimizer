@@ -95,4 +95,9 @@ public final class VoxelLodRenderer {
         totalVoxelQuadsRendered.set(0);
         totalIndirectDrawsDispatched.set(0);
     }
+
+    public synchronized void freeDirectBuffers() {
+        reset();
+        com.hyperion.optimizer.core.memory.DirectMemoryCleaner.freeDirectBuffer(indirectCommandBuffer);
+    }
 }

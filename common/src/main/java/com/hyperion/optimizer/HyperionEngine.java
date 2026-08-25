@@ -84,6 +84,10 @@ public final class HyperionEngine {
     private com.hyperion.optimizer.core.lod.voxel.VoxelHorizonBlender voxelHorizonBlender;
     private com.hyperion.optimizer.core.lod.voxel.VoxelPregenIngestEngine voxelIngestEngine;
 
+    // Mod Ecosystem Compatibility Subsystems
+    private com.hyperion.optimizer.compat.HyperionModCompatManager modCompatManager;
+    private com.hyperion.optimizer.compat.IrisShaderCompatPipeline irisShaderPipeline;
+
     // Multi-Core Multithreading Subsystems
     private HyperionThreadPoolManager threadPoolManager;
     private ParallelChunkMesher parallelChunkMesher;
@@ -267,8 +271,12 @@ public final class HyperionEngine {
         );
         this.voxelIngestEngine.configure(config);
 
+        // 16. Universal Mod Ecosystem Compatibility & Iris Pipeline
+        this.modCompatManager = com.hyperion.optimizer.compat.HyperionModCompatManager.getInstance();
+        this.irisShaderPipeline = com.hyperion.optimizer.compat.IrisShaderCompatPipeline.getInstance();
+
         this.initialized = true;
-        LOGGER.info("[Hyperion] Optimizer Core Initialized with Multi-Core, GPU-Driven, Voxel LOD (2048+ Chunks), Chunk LOD, Aggressive Culling & Crash Guard.");
+        LOGGER.info("[Hyperion] Optimizer Core Initialized with Multi-Core, GPU-Driven, Voxel LOD (2048+ Chunks), Mod Compatibility & Crash Guard.");
     }
 
     public HyperionConfig getConfig() {
@@ -541,7 +549,7 @@ public final class HyperionEngine {
             aggressiveFaceCuller.reset();
         }
         if (gpuInstancingEngine != null) {
-            gpuInstancingEngine.reset();
+            gpuInstancingEngine.freeDirectBuffers();
         }
         if (gpuCrashGuard != null) {
             gpuCrashGuard.reset();
@@ -556,10 +564,13 @@ public final class HyperionEngine {
             voxelSectionStorage.clear();
         }
         if (voxelLodRenderer != null) {
-            voxelLodRenderer.reset();
+            voxelLodRenderer.freeDirectBuffers();
         }
         if (voxelIngestEngine != null) {
             voxelIngestEngine.reset();
+        }
+        if (irisShaderPipeline != null) {
+            irisShaderPipeline.reset();
         }
         LOGGER.info("[Hyperion] Subsystems safely shut down.");
     }
@@ -618,5 +629,13 @@ public final class HyperionEngine {
 
     public com.hyperion.optimizer.core.lod.voxel.VoxelPregenIngestEngine getVoxelIngestEngine() {
         return voxelIngestEngine;
+    }
+
+    public com.hyperion.optimizer.compat.HyperionModCompatManager getModCompatManager() {
+        return modCompatManager;
+    }
+
+    public com.hyperion.optimizer.compat.IrisShaderCompatPipeline getIrisShaderPipeline() {
+        return irisShaderPipeline;
     }
 }

@@ -1,10 +1,9 @@
 package com.hyperion.optimizer.core.lod.voxel;
 
-import java.io.ByteArrayOutputStream;
-import java.nio.ByteBuffer;
+import java.util.Arrays;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.LongAdder;
 
 /**
  * 💾 Compact Voxel Section Storage & Palette Compression Engine (Inspired by Voxy).
@@ -15,17 +14,17 @@ import java.util.concurrent.atomic.AtomicLong;
  */
 public final class VoxelSectionStorage {
     private final Map<Long, byte[]> sectionDataMap = new ConcurrentHashMap<>(4096);
-    private final AtomicLong totalStoredSections = new AtomicLong(0);
-    private final AtomicLong totalCompressedBytes = new AtomicLong(0);
+    private final LongAdder totalStoredSections = new LongAdder();
+    private final LongAdder totalCompressedBytes = new LongAdder();
 
     /**
-     * Packs Section Coordinate (cx, cy, cz, mip) into a single 64-bit integer key.
+     * Packs Section Coordinate (cx, cy, cz, mip) into a single 64-bit integer key with 24-bit coordinate range (±8,388,608 blocks).
      */
     public static long packSectionKey(int chunkX, int sectionY, int chunkZ, int mipLevel) {
         long key = 0L;
-        key |= ((long) (chunkX & 0xFFFFF)) << 44;
-        key |= ((long) (sectionY & 0xFF)) << 36;
-        key |= ((long) (chunkZ & 0xFFFFF)) << 16;
+        key |= ((long) (chunkX & 0xFFFFFF)) << 36;
+        key |= ((long) (chunkZ & 0xFFFFFF)) << 12;
+        key |= ((long) (sectionY & 0xFF)) << 4;
         key |= ((long) (mipLevel & 0xF));
         return key;
     }
@@ -40,10 +39,10 @@ public final class VoxelSectionStorage {
 
         byte[] old = sectionDataMap.put(key, compressed);
         if (old == null) {
-            totalStoredSections.incrementAndGet();
-            totalCompressedBytes.addAndGet(compressed.length);
+            totalStoredSections.increment();
+            totalCompressedBytes.add(compressed.length);
         } else {
-            totalCompressedBytes.addAndGet(compressed.length - old.length);
+            totalCompressedBytes.add(compressed.length - old.length);
         }
     }
 
@@ -64,17 +63,18 @@ public final class VoxelSectionStorage {
     public void removeSection(int cx, int cy, int cz, int mip) {
         byte[] removed = sectionDataMap.remove(packSectionKey(cx, cy, cz, mip));
         if (removed != null) {
-            totalStoredSections.decrementAndGet();
-            totalCompressedBytes.addAndGet(-removed.length);
+            totalStoredSections.decrement();
+            totalCompressedBytes.add(-removed.length);
         }
     }
 
     /**
-     * Fast Run-Length Encoding (RLE) compressor.
+     * Fast zero-allocation Run-Length Encoding (RLE) compressor without ByteArrayOutputStream overhead.
      */
     public static byte[] compressRle(byte[] src) {
         if (src == null || src.length == 0) return new byte[0];
-        ByteArrayOutputStream out = new ByteArrayOutputStream(src.length / 2 + 16);
+        byte[] temp = new byte[src.length * 2];
+        int writeIdx = 0;
 
         int i = 0;
         while (i < src.length) {
@@ -83,12 +83,12 @@ public final class VoxelSectionStorage {
             while (i + runLength < src.length && src[i + runLength] == val && runLength < 255) {
                 runLength++;
             }
-            out.write((byte) runLength);
-            out.write(val);
+            temp[writeIdx++] = (byte) runLength;
+            temp[writeIdx++] = val;
             i += runLength;
         }
 
-        return out.toByteArray();
+        return Arrays.copyOf(temp, writeIdx);
     }
 
     /**
@@ -112,16 +112,16 @@ public final class VoxelSectionStorage {
     }
 
     public long getTotalStoredSections() {
-        return totalStoredSections.get();
+        return totalStoredSections.sum();
     }
 
     public long getTotalCompressedBytes() {
-        return totalCompressedBytes.get();
+        return totalCompressedBytes.sum();
     }
 
     public void clear() {
         sectionDataMap.clear();
-        totalStoredSections.set(0);
-        totalCompressedBytes.set(0);
+        totalStoredSections.reset();
+        totalCompressedBytes.reset();
     }
 }
