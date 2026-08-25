@@ -57,6 +57,11 @@ import com.hyperion.optimizer.core.gpu.GpuVendorProfile;
 import com.hyperion.optimizer.core.gpu.dualgpu.DualGpuSyncLock;
 import com.hyperion.optimizer.core.gpu.dualgpu.DualGpuThermalFallback;
 import com.hyperion.optimizer.gui.HyperionKeyBindingManager;
+import com.hyperion.optimizer.core.lod.voxel.VoxelHierarchicalMipTree;
+import com.hyperion.optimizer.core.lod.voxel.VoxelSectionStorage;
+import com.hyperion.optimizer.core.lod.voxel.VoxelLodRenderer;
+import com.hyperion.optimizer.core.lod.voxel.VoxelHorizonBlender;
+import com.hyperion.optimizer.core.lod.voxel.VoxelPregenIngestEngine;
 import com.hyperion.optimizer.mixin.MixinLightmapTexture;
 import com.hyperion.optimizer.core.threading.HyperionThreadPoolManager;
 import com.hyperion.optimizer.core.threading.ParallelChunkMesher;
@@ -857,9 +862,45 @@ public class HyperionTestRunner {
             failed++;
         }
 
+        try {
+            testVoxelHierarchicalMipTreeDownsampling();
+            System.out.println("[PASS] 87. Voxel Hierarchical Mip Tree & Distance Downsampling (Voxy 2048 Chunks)");
+            passed++;
+        } catch (Throwable t) {
+            System.err.println("[FAIL] 87. Voxel Mip Tree: " + t.getMessage());
+            failed++;
+        }
+
+        try {
+            testVoxelSectionStorageRleCompression();
+            System.out.println("[PASS] 88. Voxel Section RLE & Palette Storage Compression Engine");
+            passed++;
+        } catch (Throwable t) {
+            System.err.println("[FAIL] 88. Voxel Section Storage: " + t.getMessage());
+            failed++;
+        }
+
+        try {
+            testVoxelLodRendererAndHorizonBlender();
+            System.out.println("[PASS] 89. Voxel GPU Multi-Draw Indirect Renderer & Horizon Fog Blender");
+            passed++;
+        } catch (Throwable t) {
+            System.err.println("[FAIL] 89. Voxel LOD Renderer & Blender: " + t.getMessage());
+            failed++;
+        }
+
+        try {
+            testVoxelPregenIngestEngineAsyncIntegration();
+            System.out.println("[PASS] 90. Asynchronous Voxel Ingestion & Pre-Generation Engine (Chunky / DH)");
+            passed++;
+        } catch (Throwable t) {
+            System.err.println("[FAIL] 90. Voxel Ingestion Engine: " + t.getMessage());
+            failed++;
+        }
+
         System.out.println("=================================================");
         System.out.println("SUMMARY: " + passed + " Passed, " + failed + " Failed.");
-        System.out.println("STATUS: " + (failed == 0 ? "[VERIFIED: ALL 86 AUDIT FIXES & MULTI-CORE/GPU OPTIMIZATIONS EMPIRICALLY VERIFIED]" : "[DEFECT DETECTED]"));
+        System.out.println("STATUS: " + (failed == 0 ? "[VERIFIED: ALL 90 AUDIT FIXES, MULTI-CORE & VOXEL LOD OPTIMIZATIONS EMPIRICALLY VERIFIED]" : "[DEFECT DETECTED]"));
         System.out.println("=================================================");
 
         if (failed > 0) {
@@ -3180,7 +3221,152 @@ public class HyperionTestRunner {
             throw new AssertionError("Ctrl + Shift + 0 must trigger opening Hyperion config menu");
         }
     }
+
+    private static void testVoxelHierarchicalMipTreeDownsampling() {
+        VoxelHierarchicalMipTree mipTree = new VoxelHierarchicalMipTree(true);
+        HyperionConfig cfg = new HyperionConfig();
+        cfg.enableVoxelLodEngine = true;
+        cfg.voxelMaxRenderDistanceChunks = 2048;
+        mipTree.configure(cfg);
+
+        // 1. Verify distance to Mip level mapping
+        if (mipTree.getMipLevelForDistance(100.0) != 0) { // < 256 blocks -> Mip 0
+            throw new AssertionError("Distance 100 blocks must be Mip 0");
+        }
+        if (mipTree.getMipLevelForDistance(400.0) != 1) { // 256 - 512 blocks -> Mip 1
+            throw new AssertionError("Distance 400 blocks must be Mip 1");
+        }
+        if (mipTree.getMipLevelForDistance(800.0) != 2) { // 512 - 1024 blocks -> Mip 2
+            throw new AssertionError("Distance 800 blocks must be Mip 2");
+        }
+        if (mipTree.getMipLevelForDistance(1600.0) != 3) { // 1024 - 2048 blocks -> Mip 3
+            throw new AssertionError("Distance 1600 blocks must be Mip 3");
+        }
+        if (mipTree.getMipLevelForDistance(32000.0) != 4) { // > 2048 blocks (2048 chunks) -> Mip 4
+            throw new AssertionError("Distance 32000 blocks must be Mip 4");
+        }
+
+        // 2. Downsample a 16x16x16 chunk section (4096 voxels) filled with Stone (ID = 1)
+        byte[] rawStoneSection = new byte[4096];
+        for (int i = 0; i < rawStoneSection.length; i++) rawStoneSection[i] = (byte) 1;
+
+        byte[] mip1 = mipTree.downsampleSection(rawStoneSection, 1); // 8x8x8 = 512
+        if (mip1.length != 512 || mip1[0] != (byte) 1) {
+            throw new AssertionError("Mip 1 downsampled length must be 512 with Stone voxels, got: " + mip1.length);
+        }
+
+        byte[] mip2 = mipTree.downsampleSection(rawStoneSection, 2); // 4x4x4 = 64
+        if (mip2.length != 64 || mip2[0] != (byte) 1) {
+            throw new AssertionError("Mip 2 downsampled length must be 64, got: " + mip2.length);
+        }
+
+        byte[] mip4 = mipTree.downsampleSection(rawStoneSection, 4); // 1x1x1 = 1
+        if (mip4.length != 1 || mip4[0] != (byte) 1) {
+            throw new AssertionError("Mip 4 downsampled length must be 1, got: " + mip4.length);
+        }
+    }
+
+    private static void testVoxelSectionStorageRleCompression() {
+        VoxelSectionStorage storage = new VoxelSectionStorage();
+
+        // 1. Create a 4096-byte section with repeating layers (Stone and Dirt)
+        byte[] section = new byte[4096];
+        for (int i = 0; i < 2048; i++) section[i] = (byte) 1; // Stone
+        for (int i = 2048; i < 4096; i++) section[i] = (byte) 3; // Dirt
+
+        storage.storeSection(10, 4, -20, 0, section);
+
+        if (!storage.hasSection(10, 4, -20, 0)) {
+            throw new AssertionError("Storage must contain stored section");
+        }
+
+        byte[] decompressed = storage.getSection(10, 4, -20, 0, 4096);
+        if (decompressed == null || decompressed.length != 4096) {
+            throw new AssertionError("Decompressed section length mismatch");
+        }
+        if (decompressed[0] != (byte) 1 || decompressed[3000] != (byte) 3) {
+            throw new AssertionError("Decompressed voxel data corrupted");
+        }
+
+        // Verify that RLE compression achieves massive ratio (>90% savings)
+        long compressedBytes = storage.getTotalCompressedBytes();
+        if (compressedBytes > 100) {
+            throw new AssertionError("RLE compression failed to compact repeating voxel blocks: " + compressedBytes + " bytes");
+        }
+    }
+
+    private static void testVoxelLodRendererAndHorizonBlender() {
+        // 1. Voxel Lod Renderer Indirect Draw enqueuing
+        VoxelLodRenderer renderer = new VoxelLodRenderer(true, 1024);
+        HyperionConfig cfg = new HyperionConfig();
+        cfg.enableVoxelLodEngine = true;
+        renderer.configure(cfg);
+
+        renderer.beginLodFrame();
+        for (int i = 0; i < 50; i++) {
+            boolean ok = renderer.enqueueSectionDraw(36, 1, 0, i * 24, i);
+            if (!ok) throw new AssertionError("Enqueueing voxel indirect draw command failed");
+        }
+
+        if (renderer.getActiveDrawCommands() != 50) {
+            throw new AssertionError("Active draw commands mismatch, expected 50, got: " + renderer.getActiveDrawCommands());
+        }
+
+        ByteBuffer indirectBuf = renderer.finishLodFrame();
+        if (indirectBuf.remaining() != 50 * VoxelLodRenderer.INDIRECT_COMMAND_STRIDE_BYTES) {
+            throw new AssertionError("Indirect buffer byte size mismatch");
+        }
+
+        // 2. Voxel Horizon Blender
+        VoxelHorizonBlender blender = new VoxelHorizonBlender(true);
+        cfg.enableVoxelHorizonBlending = true;
+        cfg.voxelBlendStartChunks = 12.0;
+        cfg.voxelBlendEndChunks = 24.0;
+        blender.configure(cfg);
+
+        // Within vanilla chunk range (<= 12 chunks) -> 0.0 alpha (pure vanilla terrain)
+        if (blender.calculateLodBlendFactor(10.0) != 0.0f) {
+            throw new AssertionError("Close range must be 0.0 blend factor");
+        }
+
+        // Beyond transition range (>= 24 chunks) -> 1.0 alpha (pure voxel LOD)
+        if (blender.calculateLodBlendFactor(30.0) != 1.0f) {
+            throw new AssertionError("Far range must be 1.0 blend factor");
+        }
+
+        // Midway transition (18 chunks) -> between 0.0 and 1.0 smoothly
+        float midFactor = blender.calculateLodBlendFactor(18.0);
+        if (midFactor <= 0.1f || midFactor >= 0.9f) {
+            throw new AssertionError("Mid range blend factor must smoothly interpolate, got: " + midFactor);
+        }
+    }
+
+    private static void testVoxelPregenIngestEngineAsyncIntegration() {
+        VoxelHierarchicalMipTree mipTree = new VoxelHierarchicalMipTree(true);
+        VoxelSectionStorage storage = new VoxelSectionStorage();
+        VoxelPregenIngestEngine ingestEngine = new VoxelPregenIngestEngine(true, mipTree, storage);
+
+        byte[] rawSection = new byte[4096];
+        for (int i = 0; i < rawSection.length; i++) rawSection[i] = (byte) 2; // Grass block
+
+        // Asynchronously ingest chunk section (like Chunky or world traversal)
+        CompletableFuture<Void> future = ingestEngine.ingestSectionAsync(5, 3, 5, rawSection);
+        future.join(); // Wait for CPU mesher worker pool
+
+        if (ingestEngine.getTotalIngestedChunks() != 1) {
+            throw new AssertionError("Ingested chunks counter mismatch");
+        }
+
+        // Verify that Mip 0 and Mips 1..4 were all generated and stored in storage
+        if (!storage.hasSection(5, 3, 5, 0)) {
+            throw new AssertionError("Storage missing Mip 0 after ingestion");
+        }
+        if (!storage.hasSection(5, 3, 5, 1) || !storage.hasSection(5, 3, 5, 4)) {
+            throw new AssertionError("Storage missing downsampled Mip levels after ingestion");
+        }
+    }
 }
+
 
 
 

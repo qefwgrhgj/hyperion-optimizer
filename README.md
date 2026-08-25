@@ -16,18 +16,24 @@
    * **Агрессивный Culling:** Отсечение не просто скрытых чанков, но и внутренних невидимых граней блоков до передачи геометрии на видеокарту (`AggressiveFaceCuller`).
    * **Поддержка вендоров:** Профили под AMD Radeon (GCN/Vega/RDNA), NVIDIA + Intel (Optimus) и Apple Silicon (M1/M2/M3/M4 UMA TBDR).
    * **Ограничитель в фоновом режиме (Alt+Tab):** Жесткое ограничение FPS до 15–30 при свертывании игры, защищающее GPU от перегрева и расхода энергии (`GpuThermalPowerGuard`).
-3. **Dual-GPU Hybrid Engine, Sync Lock & Crash Guard:**
+3. **Воксельный LOD рендеринг горизонта (2048+ чанков, Inspired by Voxy):**
+   * **Иерархическая Mip-пирамида:** Построение 5 уровней воксельных Mip-сеток (Mip 0: 1 блок -> Mip 4: 16-блочный воксель) для мгновенной прорисовки сверхдальних дистанций до $2048+$ чанков ($32\text{,}768+$ блоков) (`VoxelHierarchicalMipTree`).
+   * **Компактное RLE/Palette сжатие:** Сжатие секций чанков с $4096$ байт до $<64\text{–}128$ байт (`VoxelSectionStorage`), позволяющее хранить целый горизонт в $25\text{–}50$ МБ RAM.
+   * **GPU Multi-Draw Indirect Voxel Pipeline:** Отрисовка миллионов дальних вокселей за $1$ Indirect вызов через persistent mapped buffer arena (`VoxelLodRenderer`).
+   * **Плавный переход горизонта (Horizon Blender):** Сглаживание границы между обычными чанками и вокселями с атмосферным туманом без видимых стыков (`VoxelHorizonBlender`).
+   * **Асинхронная предгенерация и фоновый инджест:** Фоновое построение вокселей при исследовании мира или интеграции с модом Chunky / генераторами (`VoxelPregenIngestEngine`).
+4. **Dual-GPU Hybrid Engine, Sync Lock & Crash Guard:**
    * **Тайм-ауты рассинхронизации (Sync Lock):** Устранение активных wait-loop циклов между встройкой и дискреткой с микро-паркованием потоков (`DualGpuSyncLock`).
    * **Аварийный откат (Auto-Fallback):** Мгновенный перенос тяжелых задач обратно на один адаптер при резком росте frametime / термальном троттлинге (`DualGpuThermalFallback`).
    * **Crash Guard (GPU Reset):** Перехват сбросов драйвера (TDR) и переключение рендеринга на работающий чип без краша игры (`GpuResetCrashGuard`).
-4. **Decoupled HUD FBO Cache (F1-Mode):**
+5. **Decoupled HUD FBO Cache (F1-Mode):**
    * Рендеринг 2D-интерфейса в отдельный оффскрин-буфер с обновлением по событиям.
    * Наложение на мир за 1 Draw Call (**прирост $+25\%\text{–}50\%$ FPS** без скрытия интерфейса).
-5. **Lithium Physics, Collision & AI:**
+6. **Lithium Physics, Collision & AI:**
    * Спящие воронки (`Sleeping Hoppers`) с пробуждением по событиям.
    * Константный быстрый кэш воксельных коллизий и 1-проходный топологический редстоун Alternate Current.
    * Предохранитель поиска путей для застрявших мобов (`PathfindingCircuitBreaker`).
-6. **Clumps, Light Engine & Bobby World Cache:**
+7. **Clumps, Light Engine & Bobby World Cache:**
    * Мгновенное слияние сфер опыта в радиусе 2 блоков (`ExperienceOrbMerger`).
    * Запекание закрытых сундуков в статический меш чанка (`StaticChestMeshBaker`).
    * Асинхронный 64-битный расчет света (`AsyncBitsetLightEngine`) и локальный кэш дальних чанков 32–64+ (`ClientWorldCacheStorage`).

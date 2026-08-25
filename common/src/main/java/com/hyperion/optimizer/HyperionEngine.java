@@ -77,6 +77,13 @@ public final class HyperionEngine {
     private com.hyperion.optimizer.core.gpu.GpuResetCrashGuard gpuCrashGuard;
     private com.hyperion.optimizer.gui.HyperionKeyBindingManager keyBindingManager;
 
+    // Voxel LOD Ultra-Distance Subsystems (Inspired by Voxy)
+    private com.hyperion.optimizer.core.lod.voxel.VoxelHierarchicalMipTree voxelMipTree;
+    private com.hyperion.optimizer.core.lod.voxel.VoxelSectionStorage voxelSectionStorage;
+    private com.hyperion.optimizer.core.lod.voxel.VoxelLodRenderer voxelLodRenderer;
+    private com.hyperion.optimizer.core.lod.voxel.VoxelHorizonBlender voxelHorizonBlender;
+    private com.hyperion.optimizer.core.lod.voxel.VoxelPregenIngestEngine voxelIngestEngine;
+
     // Multi-Core Multithreading Subsystems
     private HyperionThreadPoolManager threadPoolManager;
     private ParallelChunkMesher parallelChunkMesher;
@@ -247,8 +254,21 @@ public final class HyperionEngine {
         this.keyBindingManager = com.hyperion.optimizer.gui.HyperionKeyBindingManager.getInstance();
         this.keyBindingManager.setEnabled(config.enableConfigMenuShortcut);
 
+        // 15. Voxel LOD Ultra-Distance Horizon Engine (Voxy 2048+ Chunks)
+        this.voxelMipTree = new com.hyperion.optimizer.core.lod.voxel.VoxelHierarchicalMipTree(config.enableVoxelLodEngine);
+        this.voxelMipTree.configure(config);
+        this.voxelSectionStorage = new com.hyperion.optimizer.core.lod.voxel.VoxelSectionStorage();
+        this.voxelLodRenderer = new com.hyperion.optimizer.core.lod.voxel.VoxelLodRenderer(config.enableVoxelLodEngine, 65536);
+        this.voxelLodRenderer.configure(config);
+        this.voxelHorizonBlender = new com.hyperion.optimizer.core.lod.voxel.VoxelHorizonBlender(config.enableVoxelHorizonBlending);
+        this.voxelHorizonBlender.configure(config);
+        this.voxelIngestEngine = new com.hyperion.optimizer.core.lod.voxel.VoxelPregenIngestEngine(
+            config.enableVoxelLodEngine, this.voxelMipTree, this.voxelSectionStorage
+        );
+        this.voxelIngestEngine.configure(config);
+
         this.initialized = true;
-        LOGGER.info("[Hyperion] Optimizer Core Initialized with Multi-Core, GPU-Driven, Chunk LOD, Aggressive Culling, GPU Instancing & Crash Guard.");
+        LOGGER.info("[Hyperion] Optimizer Core Initialized with Multi-Core, GPU-Driven, Voxel LOD (2048+ Chunks), Chunk LOD, Aggressive Culling & Crash Guard.");
     }
 
     public HyperionConfig getConfig() {
@@ -449,6 +469,18 @@ public final class HyperionEngine {
             if (keyBindingManager != null) {
                 keyBindingManager.setEnabled(newConfig.enableConfigMenuShortcut);
             }
+            if (voxelMipTree != null) {
+                voxelMipTree.configure(newConfig);
+            }
+            if (voxelLodRenderer != null) {
+                voxelLodRenderer.configure(newConfig);
+            }
+            if (voxelHorizonBlender != null) {
+                voxelHorizonBlender.configure(newConfig);
+            }
+            if (voxelIngestEngine != null) {
+                voxelIngestEngine.configure(newConfig);
+            }
             LOGGER.info("[Hyperion] Configuration hot-reloaded successfully.");
         }
     }
@@ -517,6 +549,18 @@ public final class HyperionEngine {
         if (keyBindingManager != null) {
             keyBindingManager.reset();
         }
+        if (voxelMipTree != null) {
+            voxelMipTree.reset();
+        }
+        if (voxelSectionStorage != null) {
+            voxelSectionStorage.clear();
+        }
+        if (voxelLodRenderer != null) {
+            voxelLodRenderer.reset();
+        }
+        if (voxelIngestEngine != null) {
+            voxelIngestEngine.reset();
+        }
         LOGGER.info("[Hyperion] Subsystems safely shut down.");
     }
 
@@ -554,5 +598,25 @@ public final class HyperionEngine {
 
     public com.hyperion.optimizer.gui.HyperionKeyBindingManager getKeyBindingManager() {
         return keyBindingManager;
+    }
+
+    public com.hyperion.optimizer.core.lod.voxel.VoxelHierarchicalMipTree getVoxelMipTree() {
+        return voxelMipTree;
+    }
+
+    public com.hyperion.optimizer.core.lod.voxel.VoxelSectionStorage getVoxelSectionStorage() {
+        return voxelSectionStorage;
+    }
+
+    public com.hyperion.optimizer.core.lod.voxel.VoxelLodRenderer getVoxelLodRenderer() {
+        return voxelLodRenderer;
+    }
+
+    public com.hyperion.optimizer.core.lod.voxel.VoxelHorizonBlender getVoxelHorizonBlender() {
+        return voxelHorizonBlender;
+    }
+
+    public com.hyperion.optimizer.core.lod.voxel.VoxelPregenIngestEngine getVoxelIngestEngine() {
+        return voxelIngestEngine;
     }
 }

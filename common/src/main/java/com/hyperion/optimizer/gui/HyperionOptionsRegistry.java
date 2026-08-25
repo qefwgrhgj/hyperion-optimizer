@@ -184,6 +184,42 @@ public final class HyperionOptionsRegistry {
             (c, v) -> c.enableGpuBlockInstancing = v,
             true
         ));
+        register(HyperionOption.createBoolean(
+            "enableVoxelLodEngine",
+            "Воксельный LOD рендеринг (Voxy 2048+ чанков)",
+            "Отрисовывает горизонт ландшафта до 2048+ чанков через облегченные воксельные пирамиды Mip-уровней",
+            HyperionCategory.GRAPHICS_SETTINGS,
+            c -> c.enableVoxelLodEngine,
+            (c, v) -> c.enableVoxelLodEngine = v,
+            true
+        ));
+        register(HyperionOption.createIntSlider(
+            "voxelMaxRenderDistanceChunks",
+            "Дальность воксельного горизонта (Чанки)",
+            "Максимальная дистанция прорисовки воксельного LOD (от 32 до 2048+ чанков)",
+            HyperionCategory.GRAPHICS_SETTINGS,
+            c -> c.voxelMaxRenderDistanceChunks,
+            (c, v) -> c.voxelMaxRenderDistanceChunks = v,
+            2048, 64, 4096, 64
+        ));
+        register(HyperionOption.createBoolean(
+            "enableVoxelHorizonBlending",
+            "Плавный переход горизонта (Horizon Blend)",
+            "Устраняет стыки и резкие границы между обычными чанками и дальними вокселями",
+            HyperionCategory.GRAPHICS_SETTINGS,
+            c -> c.enableVoxelHorizonBlending,
+            (c, v) -> c.enableVoxelHorizonBlending = v,
+            true
+        ));
+        register(HyperionOption.createBoolean(
+            "enableVoxelAtmosphericFog",
+            "Атмосферный туман горизонта",
+            "Мягкое сглаживание атмосферной дымки на сверхдальних дистанциях горизонта",
+            HyperionCategory.GRAPHICS_SETTINGS,
+            c -> c.enableVoxelAtmosphericFog,
+            (c, v) -> c.enableVoxelAtmosphericFog = v,
+            true
+        ));
         register(HyperionOption.createDoubleSlider(
             "colorBlackCrushCompensation",
             "Компенсация черного (Anti-Black-Crush)",

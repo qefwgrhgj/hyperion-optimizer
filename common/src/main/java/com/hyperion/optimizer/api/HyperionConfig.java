@@ -49,6 +49,15 @@ public class HyperionConfig {
     public boolean enableGpuBlockInstancing = true;
     public int maxInstancesPerBatch = 16384;
 
+    // Voxel LOD Ultra-Distance Engine (Voxy 2048+ Chunks Horizon)
+    public boolean enableVoxelLodEngine = true;
+    public int voxelMaxRenderDistanceChunks = 2048;
+    public boolean enableVoxelHorizonBlending = true;
+    public double voxelBlendStartChunks = 12.0;
+    public double voxelBlendEndChunks = 24.0;
+    public boolean enableVoxelAtmosphericFog = true;
+    public String voxelStorageCompression = "RLE_PALETTE"; // RLE_PALETTE, UNCOMPRESSED, FAST_LZ4
+
     // HD Resource Packs & Fancy/Fabulous Graphics
     public boolean enableHdTextureOptimization = true;
     public boolean enableAsyncAnimatedTextures = true;
