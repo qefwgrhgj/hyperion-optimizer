@@ -25,12 +25,27 @@ public class EntityDepthCuller {
         if (isGlowing || isSpecialOrBoss) return false; // Never cull bosses, players or glowing outlines
 
         double dx = camX - entityX;
-        double dy = camY - entityY;
+        double dxSq = dx * dx;
+        if (dxSq > maxDistanceSq) {
+            return true;
+        }
+
         double dz = camZ - entityZ;
-        double distSq = dx * dx + dy * dy + dz * dz;
+        double dzSq = dz * dz;
+        if (dxSq + dzSq > maxDistanceSq) {
+            return true;
+        }
+
+        double dy = camY - entityY;
+        double distSq = dxSq + dzSq + dy * dy;
 
         // Fix P2-1: Protect against NaN or Infinity coordinates from corrupt entity data
         if (Double.isNaN(distSq) || Double.isInfinite(distSq)) {
+            return false;
+        }
+
+        // Proximity safety: never cull player, mounted entity or adjacent mobs within 4 blocks
+        if (distSq <= 16.0) {
             return false;
         }
 

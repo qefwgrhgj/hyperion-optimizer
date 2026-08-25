@@ -13,13 +13,8 @@ public class FastParticleEngine {
     private final int maxParticlesPerBlockPerSecond;
     private final double maxParticleDistanceSq;
 
-    private static class ParticleCounter {
-        long currentSecond = 0;
-        int count = 0;
-    }
-
     private static final int MAX_COUNTER_MAP_SIZE = 4096;
-    private final ConcurrentHashMap<Long, ParticleCounter> blockParticleCounters = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<Long, java.util.concurrent.atomic.AtomicLong> blockParticleCounters = new ConcurrentHashMap<>();
 
     public FastParticleEngine(boolean enabled, int maxParticlesPerBlockPerSecond, double maxParticleDistance) {
         this.enabled = enabled;
@@ -43,29 +38,44 @@ public class FastParticleEngine {
             return false; // Beyond max view distance
         }
 
-        // Fix P1-3: Periodic pruning of stale block particle counters
+        // Periodic pruning of stale block particle counters in background
         if (blockParticleCounters.size() > MAX_COUNTER_MAP_SIZE) {
-            blockParticleCounters.entrySet().removeIf(entry -> (currentEpochSecond - entry.getValue().currentSecond) > 2L);
+            com.hyperion.optimizer.core.threading.HyperionThreadPoolManager pool = com.hyperion.optimizer.core.threading.HyperionThreadPoolManager.getInstance();
+            if (pool != null && pool.getAsyncScheduler() != null && !pool.getAsyncScheduler().isShutdown()) {
+                pool.getAsyncScheduler().execute(() -> {
+                    blockParticleCounters.entrySet().removeIf(entry -> (currentEpochSecond - (entry.getValue().get() >>> 32)) > 2L);
+                });
+            } else {
+                blockParticleCounters.entrySet().removeIf(entry -> (currentEpochSecond - (entry.getValue().get() >>> 32)) > 2L);
+            }
         }
 
-        // 2. Per-Block Rate Limiter
+        // 2. Lock-Free Per-Block Rate Limiter
         int bx = (int) Math.floor(partX);
         int by = (int) Math.floor(partY);
         int bz = (int) Math.floor(partZ);
         long packed = PrimitiveVectorPool.packBlockPos(bx, by, bz);
 
-        ParticleCounter counter = blockParticleCounters.computeIfAbsent(packed, k -> new ParticleCounter());
-        synchronized (counter) {
-            if (counter.currentSecond != currentEpochSecond) {
-                counter.currentSecond = currentEpochSecond;
-                counter.count = 1;
-                return true;
+        java.util.concurrent.atomic.AtomicLong counter = blockParticleCounters.computeIfAbsent(packed, k -> new java.util.concurrent.atomic.AtomicLong(0));
+        while (true) {
+            long currentVal = counter.get();
+            long sec = currentVal >>> 32;
+            int count = (int) (currentVal & 0xFFFFFFFFL);
+
+            if (sec != currentEpochSecond) {
+                long newVal = (currentEpochSecond << 32) | 1L;
+                if (counter.compareAndSet(currentVal, newVal)) {
+                    return true;
+                }
+            } else {
+                if (count >= maxParticlesPerBlockPerSecond) {
+                    return false; // Rate limit exceeded for this block
+                }
+                long newVal = (currentEpochSecond << 32) | ((long) (count + 1) & 0xFFFFFFFFL);
+                if (counter.compareAndSet(currentVal, newVal)) {
+                    return true;
+                }
             }
-            if (counter.count >= maxParticlesPerBlockPerSecond) {
-                return false; // Rate limit exceeded for this block
-            }
-            counter.count++;
-            return true;
         }
     }
 

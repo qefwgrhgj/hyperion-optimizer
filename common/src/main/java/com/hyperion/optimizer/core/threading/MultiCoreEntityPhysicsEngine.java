@@ -87,10 +87,10 @@ public final class MultiCoreEntityPhysicsEngine {
         }
 
         try {
-            // Safety timeout: never hang main server loop
-            boolean finished = latch.await(50, TimeUnit.MILLISECONDS);
+            // Tight sub-frame safety timeout: never hang main server/client tick loop (max 5ms budget)
+            boolean finished = latch.await(5, TimeUnit.MILLISECONDS);
             if (!finished) {
-                // Main thread proceeds; remaining workers finish in background
+                // Main thread proceeds immediately; remaining workers finish in background
             }
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();

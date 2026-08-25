@@ -37,11 +37,17 @@ public final class ColorCorrectionEngine {
     private volatile int colorTemperature = 6500;
     private volatile boolean debanding = true;
 
+    // Precomputed cached temperature balance multipliers to eliminate per-pixel Math.log / Math.pow on CPU
+    private volatile float cachedTempR = 1.0f;
+    private volatile float cachedTempG = 1.0f;
+    private volatile float cachedTempB = 1.0f;
+
     // Normalization constant so ACES(1.0) == 1.0 (2.54 / 3.16)
     private static final float ACES_NORM_FACTOR = 0.8037974683544302f;
 
     public ColorCorrectionEngine(boolean enabled) {
         this.enabled = enabled;
+        recomputeColorTemperature();
     }
 
     public void configure(HyperionConfig config) {
@@ -62,6 +68,7 @@ public final class ColorCorrectionEngine {
         this.nightAmbientBoost = (float) config.colorNightAmbientBoost;
         this.colorTemperature = config.colorTemperature;
         this.debanding = config.enableColorDebanding;
+        recomputeColorTemperature();
     }
 
     /**
@@ -149,7 +156,13 @@ public final class ColorCorrectionEngine {
         outRgb[2] = clamp01(b);
     }
 
-    private void applyColorTemperature(float r, float g, float b, float[] out) {
+    private void recomputeColorTemperature() {
+        if (colorTemperature == 6500) {
+            this.cachedTempR = 1.0f;
+            this.cachedTempG = 1.0f;
+            this.cachedTempB = 1.0f;
+            return;
+        }
         float t = colorTemperature / 100.0f;
         float tempR, tempG, tempB;
         if (t <= 66.0f) {
@@ -161,9 +174,15 @@ public final class ColorCorrectionEngine {
             tempG = clamp01((float) (1.12989086089 * Math.pow(t - 60.0, -0.0755148492)));
             tempB = 1.0f;
         }
-        out[0] = r * tempR;
-        out[1] = g * tempG;
-        out[2] = b * tempB;
+        this.cachedTempR = tempR;
+        this.cachedTempG = tempG;
+        this.cachedTempB = tempB;
+    }
+
+    private void applyColorTemperature(float r, float g, float b, float[] out) {
+        out[0] = r * cachedTempR;
+        out[1] = g * cachedTempG;
+        out[2] = b * cachedTempB;
     }
 
     /**
@@ -229,6 +248,6 @@ public final class ColorCorrectionEngine {
     public void setContrast(float v) { this.contrast = v; }
     public void setBlackCrushCompensation(float v) { this.blackCrushCompensation = v; }
     public void setNightAmbientBoost(float v) { this.nightAmbientBoost = v; }
-    public void setColorTemperature(int temp) { this.colorTemperature = temp; }
+    public void setColorTemperature(int temp) { this.colorTemperature = temp; recomputeColorTemperature(); }
     public void setDebanding(boolean debanding) { this.debanding = debanding; }
 }

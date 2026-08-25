@@ -67,6 +67,10 @@ public final class HyperionEngine {
     private FastRegistryCache registryCache;
     private com.hyperion.optimizer.core.gpu.amd.AmdGpuAccelerator amdAccelerator;
     private com.hyperion.optimizer.core.gpu.dualgpu.DualGpuManager dualGpuManager;
+    private com.hyperion.optimizer.core.gpu.FastHdTextureEngine fastHdTextureEngine;
+    private com.hyperion.optimizer.core.render.FancyGraphicsOptimizer fancyGraphicsOptimizer;
+    private com.hyperion.optimizer.core.render.FastCloudEngine fastCloudEngine;
+    private com.hyperion.optimizer.core.gpu.GpuThermalPowerGuard gpuThermalGuard;
 
     // Multi-Core Multithreading Subsystems
     private HyperionThreadPoolManager threadPoolManager;
@@ -214,8 +218,20 @@ public final class HyperionEngine {
             dualMode
         );
 
+        // 13. HD Resource Packs & Fancy/Fabulous Graphics Optimizers
+        this.fastHdTextureEngine = new com.hyperion.optimizer.core.gpu.FastHdTextureEngine(config.enableHdTextureOptimization);
+        this.fastHdTextureEngine.configure(config);
+        this.fancyGraphicsOptimizer = new com.hyperion.optimizer.core.render.FancyGraphicsOptimizer(
+            config.enableSmartLeavesCulling || config.enableFabulousGraphicsOptimization
+        );
+        this.fancyGraphicsOptimizer.configure(config);
+        this.fastCloudEngine = new com.hyperion.optimizer.core.render.FastCloudEngine(config.enableFastCloudEngine);
+        this.fastCloudEngine.configure(config);
+        this.gpuThermalGuard = new com.hyperion.optimizer.core.gpu.GpuThermalPowerGuard(config.enableGpuThermalPowerGuard);
+        this.gpuThermalGuard.configure(config);
+
         this.initialized = true;
-        LOGGER.info("[Hyperion] Optimizer Core Initialized with Multi-Core and GPU Acceleration.");
+        LOGGER.info("[Hyperion] Optimizer Core Initialized with Multi-Core, GPU, HD Texture, Fast Cloud & Thermal Power Guard.");
     }
 
     public HyperionConfig getConfig() {
@@ -389,6 +405,18 @@ public final class HyperionEngine {
             if (fpsStabilizer != null) {
                 fpsStabilizer.configure(newConfig);
             }
+            if (fastHdTextureEngine != null) {
+                fastHdTextureEngine.configure(newConfig);
+            }
+            if (fancyGraphicsOptimizer != null) {
+                fancyGraphicsOptimizer.configure(newConfig);
+            }
+            if (fastCloudEngine != null) {
+                fastCloudEngine.configure(newConfig);
+            }
+            if (gpuThermalGuard != null) {
+                gpuThermalGuard.configure(newConfig);
+            }
             LOGGER.info("[Hyperion] Configuration hot-reloaded successfully.");
         }
     }
@@ -430,6 +458,34 @@ public final class HyperionEngine {
         if (networkConsolidator != null) {
             networkConsolidator.clear();
         }
+        if (fastHdTextureEngine != null) {
+            fastHdTextureEngine.resetFrameMetrics();
+        }
+        if (fancyGraphicsOptimizer != null) {
+            fancyGraphicsOptimizer.reset();
+        }
+        if (fastCloudEngine != null) {
+            fastCloudEngine.reset();
+        }
+        if (gpuThermalGuard != null) {
+            gpuThermalGuard.reset();
+        }
         LOGGER.info("[Hyperion] Subsystems safely shut down.");
+    }
+
+    public com.hyperion.optimizer.core.gpu.FastHdTextureEngine getFastHdTextureEngine() {
+        return fastHdTextureEngine;
+    }
+
+    public com.hyperion.optimizer.core.render.FancyGraphicsOptimizer getFancyGraphicsOptimizer() {
+        return fancyGraphicsOptimizer;
+    }
+
+    public com.hyperion.optimizer.core.render.FastCloudEngine getFastCloudEngine() {
+        return fastCloudEngine;
+    }
+
+    public com.hyperion.optimizer.core.gpu.GpuThermalPowerGuard getGpuThermalGuard() {
+        return gpuThermalGuard;
     }
 }

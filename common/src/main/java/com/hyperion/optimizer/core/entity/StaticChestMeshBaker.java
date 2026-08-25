@@ -38,6 +38,7 @@ public class StaticChestMeshBaker {
 
     // Fix P2-2: Prune open chest state on chunk unload to prevent memory leaks in long sessions
     public void invalidateChunk(int chunkX, int chunkZ) {
+        if (!enabled || openChests.isEmpty()) return;
         int minBlockX = chunkX << 4;
         int maxBlockX = minBlockX + 15;
         int minBlockZ = chunkZ << 4;

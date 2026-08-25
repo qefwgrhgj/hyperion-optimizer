@@ -59,7 +59,7 @@ public class FastFluidEngine {
 
     // Fix P1-2: Prune chunk fluid cache on chunk unload
     public void invalidateChunk(int chunkX, int chunkZ) {
-        if (!enabled) return;
+        if (!enabled || flowVectorCache.isEmpty()) return;
         int minBlockX = chunkX << 4;
         int maxBlockX = minBlockX + 15;
         int minBlockZ = chunkZ << 4;

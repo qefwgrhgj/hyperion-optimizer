@@ -16,10 +16,18 @@ public class SleepingHopperManager {
     public boolean isHopperSleeping(long packedPos, long currentServerTick) {
         if (!enabled) return false;
 
-        // Auto-prune expired sleeping hoppers periodically with P2-3 tick rollback defense
+        // Auto-prune expired sleeping hoppers periodically in background without stalling main tick
         if (currentServerTick < lastCleanupTick || (currentServerTick - lastCleanupTick) > CLEANUP_INTERVAL_TICKS) {
             this.lastCleanupTick = currentServerTick;
-            sleepingHoppers.entrySet().removeIf(entry -> currentServerTick >= entry.getValue() || entry.getValue() < currentServerTick);
+            final long checkTick = currentServerTick;
+            com.hyperion.optimizer.core.threading.HyperionThreadPoolManager pool = com.hyperion.optimizer.core.threading.HyperionThreadPoolManager.getInstance();
+            if (pool != null && pool.getAsyncScheduler() != null && !pool.getAsyncScheduler().isShutdown()) {
+                pool.getAsyncScheduler().execute(() -> {
+                    sleepingHoppers.entrySet().removeIf(entry -> checkTick >= entry.getValue() || entry.getValue() < checkTick);
+                });
+            } else {
+                sleepingHoppers.entrySet().removeIf(entry -> checkTick >= entry.getValue() || entry.getValue() < checkTick);
+            }
         }
 
         Long sleepUntilTick = sleepingHoppers.get(packedPos);

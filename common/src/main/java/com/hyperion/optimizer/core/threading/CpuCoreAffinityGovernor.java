@@ -48,7 +48,7 @@ public final class CpuCoreAffinityGovernor {
         if (!enabled) return;
         if (frameDurationNanos > targetBudgetNanos * 1.5) {
             totalThreadYields.incrementAndGet();
-            Thread.yield();
+            // Do not call Thread.yield() directly on render thread to prevent severe frame drops and OS scheduler stalls
         }
     }
 

@@ -96,6 +96,13 @@ public class FastExplosionEngine {
         }
     }
 
+    private static final class ExplosionThreadLocalBuffers {
+        final long[] blockBuffer = new long[8192];
+        final long[] hashKeys = new long[16384];
+    }
+    private static final ThreadLocal<ExplosionThreadLocalBuffers> BUFFERS =
+        ThreadLocal.withInitial(ExplosionThreadLocalBuffers::new);
+
     private final boolean enabled;
     private final int maxRaySteps;
 
@@ -111,13 +118,13 @@ public class FastExplosionEngine {
             return new ExplosionResult(new long[0], 0, type, expX, expY, expZ, power);
         }
 
-        // Fix P1-1: 16,384 slots and probe guard to prevent infinite loops on massive explosions
-        int maxCapacity = 8192;
-        long[] blockBuffer = new long[maxCapacity];
-        int count = 0;
+        ExplosionThreadLocalBuffers bufs = BUFFERS.get();
+        long[] blockBuffer = bufs.blockBuffer;
+        long[] hashKeys = bufs.hashKeys;
+        java.util.Arrays.fill(hashKeys, 0L);
 
-        // Local deduplication set using simple primitive hash table
-        long[] hashKeys = new long[16384];
+        int maxCapacity = blockBuffer.length;
+        int count = 0;
         int hashMask = hashKeys.length - 1;
 
         for (int r = 0; r < TOTAL_RAYS; r++) {

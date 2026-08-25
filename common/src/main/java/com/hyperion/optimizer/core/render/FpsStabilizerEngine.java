@@ -25,6 +25,10 @@ public final class FpsStabilizerEngine {
     private long currentFrameTimeNano = 2_857_142L; // Default ~350 FPS (2.85ms)
     private int chunkUploadsThisFrame = 0;
 
+    private volatile boolean enableFogCulling = true;
+    private volatile boolean enableLazyChunkPacing = true;
+    private volatile boolean enableTickInterpolation = true;
+
     // Rolling frame history (128 samples)
     private final long[] frameHistory = new long[128];
     private int historyIndex = 0;
@@ -62,8 +66,23 @@ public final class FpsStabilizerEngine {
     }
 
     /**
+     * Calculates dynamic chunk upload budget based on real-time sub-frame margin (OptiFine Chunk Updates).
+     * If frame time is well within budget, allows up to 2x uploads; if struggling, clamps strictly to 1 upload.
+     */
+    public int getDynamicChunkUploadLimit() {
+        if (!dynamicWorkBudgeting) return maxChunkUploadsPerFrame;
+        long targetBudget = 1_000_000_000L / Math.max(1, targetFps);
+        if (currentFrameTimeNano < (targetBudget / 2)) {
+            return Math.min(8, maxChunkUploadsPerFrame * 2);
+        } else if (currentFrameTimeNano > targetBudget) {
+            return 1;
+        }
+        return maxChunkUploadsPerFrame;
+    }
+
+    /**
      * Evaluates if a chunk section mesh can be uploaded to GPU in the current frame.
-     * Prevents dropping from 350 FPS to 60 FPS when entering loaded chunks.
+     * Prevents dropping from 350 FPS to 60 FPS when entering loaded chunks (OptiFine Chunk Updates).
      */
     public boolean canUploadChunkMeshThisFrame() {
         if (!enabled) return true;
@@ -72,6 +91,27 @@ public final class FpsStabilizerEngine {
         }
         chunkUploadsThisFrame++;
         return true;
+    }
+
+    /**
+     * Culls objects, entities and distant particles completely hidden behind the fog horizon.
+     */
+    public boolean shouldCullBehindFog(double distanceSq, double fogEndDistance) {
+        if (!enabled || !enableFogCulling) return false;
+        double fogEndSq = fogEndDistance * fogEndDistance;
+        return distanceSq > fogEndSq;
+    }
+
+    /**
+     * Calculates high-precision tick-to-render motion interpolation alpha to eliminate mob/block jitter.
+     */
+    public float calculateMotionAlpha(long lastTickNano, long currentTickNano, long renderTimeNano) {
+        if (!enableTickInterpolation) return 1.0f;
+        long tickDuration = currentTickNano - lastTickNano;
+        if (tickDuration <= 0) return 1.0f;
+        long elapsed = renderTimeNano - lastTickNano;
+        float alpha = (float) elapsed / (float) tickDuration;
+        return Math.max(0.0f, Math.min(1.0f, alpha));
     }
 
     /**
@@ -95,9 +135,19 @@ public final class FpsStabilizerEngine {
         if (isOccluded) return true;
 
         double dx = camX - beX;
-        double dy = camY - beY;
+        double dxSq = dx * dx;
+        if (dxSq > blockEntityCullDistanceSq) {
+            return true;
+        }
+
         double dz = camZ - beZ;
-        return (dx * dx + dy * dy + dz * dz) > blockEntityCullDistanceSq;
+        double dzSq = dz * dz;
+        if (dxSq + dzSq > blockEntityCullDistanceSq) {
+            return true;
+        }
+
+        double dy = camY - beY;
+        return (dxSq + dzSq + dy * dy) > blockEntityCullDistanceSq;
     }
 
     /**
@@ -137,6 +187,8 @@ public final class FpsStabilizerEngine {
     public boolean isDynamicWorkBudgetingEnabled() { return dynamicWorkBudgeting; }
     public boolean isAggressiveCaveCullingEnabled() { return aggressiveCaveCulling; }
     public boolean isBlockEntityDistanceCullingEnabled() { return blockEntityDistanceCulling; }
+    public boolean isFogCullingEnabled() { return enableFogCulling; }
+    public boolean isTickInterpolationEnabled() { return enableTickInterpolation; }
 
     public void setEnabled(boolean enabled) { this.enabled = enabled; }
     public void setTargetFps(int targetFps) { this.targetFps = Math.max(30, targetFps); }
@@ -145,4 +197,6 @@ public final class FpsStabilizerEngine {
     public void setAggressiveCaveCulling(boolean aggressiveCaveCulling) { this.aggressiveCaveCulling = aggressiveCaveCulling; }
     public void setBlockEntityDistanceCulling(boolean blockEntityDistanceCulling) { this.blockEntityDistanceCulling = blockEntityDistanceCulling; }
     public void setBlockEntityCullDistance(double dist) { this.blockEntityCullDistanceSq = dist * dist; }
+    public void setFogCulling(boolean fogCulling) { this.enableFogCulling = fogCulling; }
+    public void setTickInterpolation(boolean tickInterpolation) { this.enableTickInterpolation = tickInterpolation; }
 }

@@ -86,23 +86,49 @@ public class FastRedstoneEngine {
             }
         }
 
+        // Build O(1) spatial index for instant neighbor wire lookup
+        int rawNodeCap = Math.max(64, networkWires.size() * 2);
+        int nodeTableCap = 1 << (32 - Integer.numberOfLeadingZeros(rawNodeCap - 1));
+        long[] nodeKeys = new long[nodeTableCap];
+        WireNode[] nodeValues = new WireNode[nodeTableCap];
+        int nodeMask = nodeTableCap - 1;
+
+        for (WireNode wire : networkWires) {
+            long packed = wire.packedPos;
+            int slot = ((int) (packed ^ (packed >>> 32))) & nodeMask;
+            while (nodeKeys[slot] != 0 && nodeKeys[slot] != packed) {
+                slot = (slot + 1) & nodeMask;
+            }
+            nodeKeys[slot] = packed;
+            nodeValues[slot] = wire;
+        }
+
+        int[][] neighborOffsets = {
+            {1, 0, 0}, {-1, 0, 0}, {0, 0, 1}, {0, 0, -1},
+            {1, 1, 0}, {-1, 1, 0}, {0, 1, 1}, {0, 1, -1},
+            {1, -1, 0}, {-1, -1, 0}, {0, -1, 1}, {0, -1, -1}
+        };
+
         int queueIndex = 0;
         while (queueIndex < queue.size()) {
             WireNode current = queue.get(queueIndex++);
             int nextPower = current.targetPower - 1;
             if (nextPower <= 0) continue;
 
-            for (WireNode neighbor : networkWires) {
-                if (neighbor == current) continue;
-                // Adjacent check (Manhattan distance == 1 in X/Z, or Y +/- 1)
-                int dx = Math.abs(current.x - neighbor.x);
-                int dy = Math.abs(current.y - neighbor.y);
-                int dz = Math.abs(current.z - neighbor.z);
-
-                if ((dx + dz == 1 && dy == 0) || (dx + dz == 1 && dy == 1)) {
-                    if (nextPower > neighbor.targetPower) {
-                        neighbor.targetPower = nextPower;
-                        queue.add(neighbor);
+            for (int[] off : neighborOffsets) {
+                long targetPacked = PrimitiveVectorPool.packBlockPos(current.x + off[0], current.y + off[1], current.z + off[2]);
+                int slot = ((int) (targetPacked ^ (targetPacked >>> 32))) & nodeMask;
+                int probes = 0;
+                while (nodeKeys[slot] != 0 && nodeKeys[slot] != targetPacked && probes++ < 64) {
+                    slot = (slot + 1) & nodeMask;
+                }
+                if (nodeKeys[slot] == targetPacked) {
+                    WireNode neighbor = nodeValues[slot];
+                    if (neighbor != null && neighbor != current) {
+                        if (nextPower > neighbor.targetPower) {
+                            neighbor.targetPower = nextPower;
+                            queue.add(neighbor);
+                        }
                     }
                 }
             }

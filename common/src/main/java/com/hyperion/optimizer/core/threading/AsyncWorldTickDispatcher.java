@@ -13,6 +13,7 @@ import java.util.concurrent.atomic.LongAdder;
 public final class AsyncWorldTickDispatcher {
     private final boolean enabled;
     private final ConcurrentLinkedQueue<Runnable> asyncWorldTasks = new ConcurrentLinkedQueue<>();
+    private final java.util.concurrent.atomic.AtomicInteger pendingQueueSize = new java.util.concurrent.atomic.AtomicInteger(0);
     private final ExecutorService lightPool;
     private final LongAdder dispatchedTasks = new LongAdder();
     private final LongAdder completedTasks = new LongAdder();
@@ -33,6 +34,7 @@ public final class AsyncWorldTickDispatcher {
         }
 
         asyncWorldTasks.offer(task);
+        pendingQueueSize.incrementAndGet();
         dispatchedTasks.increment();
         triggerAsyncDrain();
     }
@@ -43,6 +45,7 @@ public final class AsyncWorldTickDispatcher {
                 try {
                     Runnable r;
                     while ((r = asyncWorldTasks.poll()) != null) {
+                        pendingQueueSize.decrementAndGet();
                         try {
                             r.run();
                             completedTasks.increment();
@@ -70,7 +73,7 @@ public final class AsyncWorldTickDispatcher {
     }
 
     public int getQueueDepth() {
-        return asyncWorldTasks.size();
+        return Math.max(0, pendingQueueSize.get());
     }
 
     public boolean isEnabled() {

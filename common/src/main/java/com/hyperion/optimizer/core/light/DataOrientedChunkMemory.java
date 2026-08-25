@@ -7,7 +7,7 @@ public class DataOrientedChunkMemory {
     // Linear 1D flat array for optimal CPU L1/L2/L3 cache line prefetching (64-byte cache lines)
     private final byte[] packedLightArray = new byte[SECTION_BLOCK_COUNT / 2]; // 4 bits per block (0-15 light levels)
 
-    public synchronized int getLight(int x, int y, int z) {
+    public int getLight(int x, int y, int z) {
         int index = ((y & 0x0F) << 8) | ((z & 0x0F) << 4) | (x & 0x0F);
         int byteIndex = index >> 1;
         byte val = packedLightArray[byteIndex];

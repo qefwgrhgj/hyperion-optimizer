@@ -25,9 +25,19 @@ public class AnimationLodManager {
         if (!enabled) return false;
 
         double dx = camX - entityX;
-        double dy = camY - entityY;
+        double dxSq = dx * dx;
+        if (dxSq > farDistSq) {
+            return ((currentFrameIndex + entityId) & 3) != 0;
+        }
+
         double dz = camZ - entityZ;
-        double distSq = dx * dx + dy * dy + dz * dz;
+        double dzSq = dz * dz;
+        if (dxSq + dzSq > farDistSq) {
+            return ((currentFrameIndex + entityId) & 3) != 0;
+        }
+
+        double dy = camY - entityY;
+        double distSq = dxSq + dzSq + dy * dy;
 
         if (distSq <= nearDistSq) {
             return false; // Full framerate animation (144+ FPS)

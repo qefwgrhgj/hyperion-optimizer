@@ -2,12 +2,12 @@ package com.hyperion.optimizer.core.gpu;
 
 public final class SimdFrustumCuller {
     private final float[][] frustumPlanes = new float[6][4];
+    private final float[] clip = new float[16];
 
     public void updatePlanes(float[] proj, float[] mod) {
         if (proj == null || mod == null || proj.length < 16 || mod.length < 16) {
             return;
         }
-        float[] clip = new float[16];
         for (int i = 0; i < 4; i++) {
             for (int j = 0; j < 4; j++) {
                 clip[i * 4 + j] =

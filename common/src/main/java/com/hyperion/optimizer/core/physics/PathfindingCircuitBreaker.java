@@ -63,7 +63,14 @@ public class PathfindingCircuitBreaker {
 
     private void cleanupStaleEntries(long currentTick) {
         this.lastCleanupTick = currentTick;
-        entityTrackers.entrySet().removeIf(entry -> currentTick < entry.getValue().lastAccessTick || (currentTick - entry.getValue().lastAccessTick) > CLEANUP_INTERVAL_TICKS);
+        com.hyperion.optimizer.core.threading.HyperionThreadPoolManager pool = com.hyperion.optimizer.core.threading.HyperionThreadPoolManager.getInstance();
+        if (pool != null && pool.getAsyncScheduler() != null && !pool.getAsyncScheduler().isShutdown()) {
+            pool.getAsyncScheduler().execute(() -> {
+                entityTrackers.entrySet().removeIf(entry -> currentTick < entry.getValue().lastAccessTick || (currentTick - entry.getValue().lastAccessTick) > CLEANUP_INTERVAL_TICKS);
+            });
+        } else {
+            entityTrackers.entrySet().removeIf(entry -> currentTick < entry.getValue().lastAccessTick || (currentTick - entry.getValue().lastAccessTick) > CLEANUP_INTERVAL_TICKS);
+        }
     }
 
     public void removeEntity(int entityId) {

@@ -21,9 +21,15 @@ public class ExperienceOrbMerger {
         }
 
         double dx = orb1X - orb2X;
-        double dy = orb1Y - orb2Y;
+        double dxSq = dx * dx;
+        if (dxSq > mergeRadiusSq) return false;
+
         double dz = orb1Z - orb2Z;
-        return (dx * dx + dy * dy + dz * dz) <= mergeRadiusSq;
+        double dzSq = dz * dz;
+        if (dxSq + dzSq > mergeRadiusSq) return false;
+
+        double dy = orb1Y - orb2Y;
+        return (dxSq + dzSq + dy * dy) <= mergeRadiusSq;
     }
 
     // Fix P1-3: Non-negative age clamp prevents entity timer corruption

@@ -49,11 +49,17 @@ public class SpatialCollisionEngine {
         spatialGrid.clear();
     }
 
+    public void onTickStart() {
+        if (!spatialGrid.isEmpty()) {
+            spatialGrid.clear();
+        }
+    }
+
     public void registerEntity(CollidableEntity entity) {
         if (!enabled || entity == null) return;
         entity.collisionCheckCount = 0;
         long bucket = packSpatialBucket(entity.x, entity.z);
-        List<CollidableEntity> list = spatialGrid.computeIfAbsent(bucket, k -> new ArrayList<>());
+        List<CollidableEntity> list = spatialGrid.computeIfAbsent(bucket, k -> new ArrayList<>(8));
         synchronized (list) {
             list.add(entity);
         }
@@ -65,6 +71,15 @@ public class SpatialCollisionEngine {
     public List<CollidableEntity> getNearbyCandidates(double x, double z) {
         if (!enabled) return new ArrayList<>();
         List<CollidableEntity> candidates = new ArrayList<>();
+        collectNearbyCandidates(x, z, candidates);
+        return candidates;
+    }
+
+    /**
+     * Fills the destination collection with nearby candidates with zero intermediate allocations.
+     */
+    public void collectNearbyCandidates(double x, double z, List<CollidableEntity> destination) {
+        if (!enabled || destination == null) return;
         int baseBucketX = ((int) Math.floor(x)) >> 2;
         int baseBucketZ = ((int) Math.floor(z)) >> 2;
 
@@ -72,14 +87,13 @@ public class SpatialCollisionEngine {
             for (int dz = -1; dz <= 1; dz++) {
                 long bucket = (((long) (baseBucketX + dx)) << 32) | ((baseBucketZ + dz) & 0xFFFFFFFFL);
                 List<CollidableEntity> list = spatialGrid.get(bucket);
-                if (list != null) {
+                if (list != null && !list.isEmpty()) {
                     synchronized (list) {
-                        candidates.addAll(list);
+                        destination.addAll(list);
                     }
                 }
             }
         }
-        return candidates;
     }
 
     /**

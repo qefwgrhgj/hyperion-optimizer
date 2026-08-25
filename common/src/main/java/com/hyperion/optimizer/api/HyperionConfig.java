@@ -35,6 +35,20 @@ public class HyperionConfig {
     public double animationLodNearDistance = 12.0;
     public double animationLodFarDistance = 28.0;
 
+    // HD Resource Packs & Fancy/Fabulous Graphics
+    public boolean enableHdTextureOptimization = true;
+    public boolean enableAsyncAnimatedTextures = true;
+    public boolean enableAdaptiveMipmapPacing = true;
+    public int maxHdAtlasDimension = 16384;
+    public boolean enableSmartLeavesCulling = true;
+    public boolean enableFabulousGraphicsOptimization = true;
+    public boolean enableTranslucentSortThrottling = true;
+
+    // Fast Cloud Engine
+    public boolean enableFastCloudEngine = true;
+    public boolean enableCloudCulling = true;
+    public boolean enableCloudMeshReuse = true;
+
     // 2. Video Card / GPU Settings (Настройки видеокарт)
     public boolean enableAmdHardwareAcceleration = true;
     public String amdArchitectureProfile = "AUTO"; // AUTO, RADEON_RX500_POLARIS, RADEON_540_LEXA, RADEON_VEGA_8_APU, RDNA_MODERN
@@ -51,6 +65,15 @@ public class HyperionConfig {
     public boolean enableSecondaryGpuHudOffload = true;
     public boolean enableSecondaryGpuLightOffload = true;
     public boolean enableSecondaryGpuParticleOffload = true;
+
+    // GPU Thermal & Power Spike Guard (Anti-Coil-Whine)
+    public boolean enableGpuThermalPowerGuard = true;
+    public boolean enableMenuFpsCap = true;
+    public int menuMaxFramerate = 60;
+    public boolean enableBackgroundFpsCap = true;
+    public int backgroundMaxFramerate = 20;
+    public boolean enableCoilWhineSuppression = true;
+    public int maxPeakFramerateCap = 500;
 
     // 3. Processor & Multithreading Settings (Настройки процессора)
     public boolean enableCpuMultithreading = true;

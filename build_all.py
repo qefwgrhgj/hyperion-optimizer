@@ -142,7 +142,7 @@ def package_jars():
     print("[4/6] Packaging JAR artifacts...")
     for mod in MODULES:
         mod_dest = CLASSES_DIR / mod
-        jar_name = f"hyperion-optimizer-{mod}-1.0.0.jar"
+        jar_name = f"hyperion-optimizer-{mod}-1.0.2.jar"
         jar_path = LIBS_DIR / jar_name
         if jar_path.exists():
             jar_path.unlink()
@@ -152,7 +152,7 @@ def package_jars():
 
 def deploy_to_launcher():
     print("[5/6] Deploying Fabric 1.21.11 build to ElyPrismLauncher...")
-    target_jar = LIBS_DIR / "hyperion-optimizer-fabric-1.21.11-1.0.0.jar"
+    target_jar = LIBS_DIR / "hyperion-optimizer-fabric-1.21.11-1.0.2.jar"
     if LAUNCHER_MODS_DIR.exists() and target_jar.exists():
         dest = LAUNCHER_MODS_DIR / target_jar.name
         shutil.copy2(target_jar, dest)
