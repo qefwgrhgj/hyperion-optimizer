@@ -137,6 +137,18 @@ public final class MobAiOptimizer {
         return (tickCount % 3) == 0; // Throttle to 33% frequency
     }
 
+    /**
+     * Throttles hostile monster pathfinding and random wandering at night when they are not in active combat.
+     * Prevents dozens of surface-spawned night mobs from overwhelming the CPU.
+     */
+    public boolean shouldThrottleNightHostileMob(boolean isHostile, boolean isNight, double distToPlayer, long worldTick, int entityId) {
+        if (!enabled || !isHostile || !isNight) return false;
+        if (distToPlayer > 24.0) {
+            return ((worldTick + entityId) % 4) != 0; // Run pathfinding at 5 Hz instead of 20 Hz
+        }
+        return false;
+    }
+
     public boolean isEnabled() { return enabled; }
     public boolean isHostileHazardBypassEnabled() { return enableHostileHazardBypass; }
     public boolean isTargetScanPacingEnabled() { return enableTargetScanPacing; }

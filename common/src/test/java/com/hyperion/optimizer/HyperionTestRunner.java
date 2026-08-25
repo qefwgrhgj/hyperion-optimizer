@@ -1121,9 +1121,18 @@ public class HyperionTestRunner {
             failed++;
         }
 
+        try {
+            testNightLightmapDiscreteQuantizationAndHostileMobPacing();
+            System.out.println("[PASS] 115. Night-Time Lightmap Quantization & Hostile Surface Mob Anti-Lag Throttling");
+            passed++;
+        } catch (Throwable t) {
+            System.err.println("[FAIL] 115. Night-Time Lightmap & Mob Throttling: " + t.getMessage());
+            failed++;
+        }
+
         System.out.println("=================================================");
         System.out.println("SUMMARY: " + passed + " Passed, " + failed + " Failed.");
-        System.out.println("STATUS: " + (failed == 0 ? "[VERIFIED: ALL 114 ARCHITECTURAL, AUDIT, RESPAWN & 32-CHUNK MOB OPTIMIZATION CONTRACTS VERIFIED]" : "[DEFECT DETECTED]"));
+        System.out.println("STATUS: " + (failed == 0 ? "[VERIFIED: ALL 115 ARCHITECTURAL, AUDIT, RESPAWN & NIGHT/32-CHUNK PERFORMANCE CONTRACTS VERIFIED]" : "[DEFECT DETECTED]"));
         System.out.println("=================================================");
 
         if (failed > 0) {
@@ -4092,7 +4101,45 @@ public class HyperionTestRunner {
             throw new AssertionError("Near mobs must be registered in spatial collision grid");
         }
     }
+
+    private static void testNightLightmapDiscreteQuantizationAndHostileMobPacing() {
+        // 1. Night Lightmap Quantization
+        com.hyperion.optimizer.core.micro.BadOptimizationsEngine badOpt =
+            new com.hyperion.optimizer.core.micro.BadOptimizationsEngine(true);
+
+        // Initial lightmap generation
+        boolean u0 = badOpt.checkAndUpdateLightmapDirty(0.8500f, 0.0f, 1.0f);
+        if (!u0) {
+            throw new AssertionError("First lightmap check must return true to upload initial texture");
+        }
+
+        // Sub-step frame variation at night (e.g. 0.8502f) must NOT trigger re-upload
+        boolean u1 = badOpt.checkAndUpdateLightmapDirty(0.8502f, 0.0f, 1.0f);
+        if (u1) {
+            throw new AssertionError("Micro-variations in skyDarken at night must be quantized to prevent per-frame GPU stalls");
+        }
+
+        // Meaningful discrete light step (e.g. 0.9000f) must update
+        boolean u2 = badOpt.checkAndUpdateLightmapDirty(0.9000f, 0.0f, 1.0f);
+        if (!u2) {
+            throw new AssertionError("Discrete light step must trigger update");
+        }
+
+        // 2. Night Hostile Mob Throttling
+        com.hyperion.optimizer.core.ai.MobAiOptimizer mobAi = new com.hyperion.optimizer.core.ai.MobAiOptimizer(true);
+        // Distant monster (>24m) at night must be throttled on non-quarter ticks
+        boolean throttled = mobAi.shouldThrottleNightHostileMob(true, true, 30.0, 1, 0);
+        if (!throttled) {
+            throw new AssertionError("Distant hostile monster at night must be throttled");
+        }
+        // Melee range monster (<24m) at night must NOT be throttled
+        boolean nearThrottled = mobAi.shouldThrottleNightHostileMob(true, true, 10.0, 1, 0);
+        if (nearThrottled) {
+            throw new AssertionError("Melee combat range monster (<24m) must not be throttled");
+        }
+    }
 }
+
 
 
 

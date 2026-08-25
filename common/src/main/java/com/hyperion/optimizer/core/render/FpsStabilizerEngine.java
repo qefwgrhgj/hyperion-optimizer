@@ -86,6 +86,10 @@ public final class FpsStabilizerEngine {
      */
     public boolean canUploadChunkMeshThisFrame() {
         if (!enabled) return true;
+        long targetBudget = 1_000_000_000L / Math.max(1, targetFps);
+        if (dynamicWorkBudgeting && currentFrameTimeNano > targetBudget && chunkUploadsThisFrame >= 1) {
+            return false; // Throttled to 1 upload during heavy frame load
+        }
         if (chunkUploadsThisFrame >= maxChunkUploadsPerFrame) {
             return false; // Defer remaining mesh uploads to next frame to preserve 350 FPS
         }

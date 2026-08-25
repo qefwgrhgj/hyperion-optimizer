@@ -71,10 +71,17 @@ public final class BadOptimizationsEngine {
             return true;
         }
 
-        if (Math.abs(skyDarken - lastSkyDarken) < 1e-4f &&
-            Math.abs(blockLightFactor - lastBlockLightFactor) < 1e-4f &&
-            Math.abs(gamma - lastGamma) < 1e-4f &&
-            !isLightmapDirty) {
+        // Quantize skyDarken, blockLight, and gamma into 64 discrete steps (~0.015 precision)
+        // Eliminates continuous per-frame GPU texture upload stalls during dusk, night, and dawn
+        int qSky = (int) (skyDarken * 64.0f);
+        int qBlock = (int) (blockLightFactor * 64.0f);
+        int qGamma = (int) (gamma * 64.0f);
+
+        int lastQSky = (int) (lastSkyDarken * 64.0f);
+        int lastQBlock = (int) (lastBlockLightFactor * 64.0f);
+        int lastQGamma = (int) (lastGamma * 64.0f);
+
+        if (qSky == lastQSky && qBlock == lastQBlock && qGamma == lastQGamma && !isLightmapDirty) {
             totalLightmapRecalculationsSkipped.increment();
             return false; // Skip redundant recalculation
         }
