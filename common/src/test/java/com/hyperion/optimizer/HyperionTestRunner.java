@@ -65,6 +65,10 @@ import com.hyperion.optimizer.core.lod.voxel.VoxelPregenIngestEngine;
 import com.hyperion.optimizer.core.memory.DirectMemoryCleaner;
 import com.hyperion.optimizer.compat.HyperionModCompatManager;
 import com.hyperion.optimizer.compat.IrisShaderCompatPipeline;
+import com.hyperion.optimizer.core.particle.AdvancedParticleEngine;
+import com.hyperion.optimizer.core.micro.BadOptimizationsEngine;
+import com.hyperion.optimizer.core.ai.MobAiOptimizer;
+import com.hyperion.optimizer.core.animation.PalladiumCapabilityCache;
 import com.hyperion.optimizer.mixin.MixinLightmapTexture;
 import com.hyperion.optimizer.core.threading.HyperionThreadPoolManager;
 import com.hyperion.optimizer.core.threading.ParallelChunkMesher;
@@ -964,9 +968,45 @@ public class HyperionTestRunner {
             failed++;
         }
 
+        try {
+            testParticleCoreGpuBatchingAndVectorMath();
+            System.out.println("[PASS] 98. Particle Core GPU Batching, Frustum Culling & Parametric Vector Math");
+            passed++;
+        } catch (Throwable t) {
+            System.err.println("[FAIL] 98. Particle Core: " + t.getMessage());
+            failed++;
+        }
+
+        try {
+            testBadOptimizationsLightmapAndBiomeBlendCache();
+            System.out.println("[PASS] 99. BadOptimizations Lightmap Dirty Gate & Biome Blend Fast Caching");
+            passed++;
+        } catch (Throwable t) {
+            System.err.println("[FAIL] 99. BadOptimizations: " + t.getMessage());
+            failed++;
+        }
+
+        try {
+            testMobtimizationsPathfindingAndTargetPacing();
+            System.out.println("[PASS] 100. Mobtimizations Entity AI Pathfinding & Hostile Hazard Bypass");
+            passed++;
+        } catch (Throwable t) {
+            System.err.println("[FAIL] 100. Mobtimizations AI: " + t.getMessage());
+            failed++;
+        }
+
+        try {
+            testPalladiumCapabilityAndMatrixStackCache();
+            System.out.println("[PASS] 101. Palladium Capability State & Animation Matrix Transformation Cache");
+            passed++;
+        } catch (Throwable t) {
+            System.err.println("[FAIL] 101. Palladium Cache: " + t.getMessage());
+            failed++;
+        }
+
         System.out.println("=================================================");
         System.out.println("SUMMARY: " + passed + " Passed, " + failed + " Failed.");
-        System.out.println("STATUS: " + (failed == 0 ? "[VERIFIED: ALL 97 AUDIT REMEDIATIONS, PURPLE-TEAM & OPTIMIZATION CONTRACTS EMPIRICALLY VERIFIED]" : "[DEFECT DETECTED]"));
+        System.out.println("STATUS: " + (failed == 0 ? "[VERIFIED: ALL 101 OPTIMIZATION, VOXY, PARTICLE CORE, BADOPT & MOBTIMIZATIONS CONTRACTS VERIFIED]" : "[DEFECT DETECTED]"));
         System.out.println("=================================================");
 
         if (failed > 0) {
@@ -3552,7 +3592,147 @@ public class HyperionTestRunner {
             throw new AssertionError("Resolution change must force immediate HUD repaint");
         }
     }
+
+    private static void testParticleCoreGpuBatchingAndVectorMath() {
+        AdvancedParticleEngine particleEngine = new AdvancedParticleEngine(true, 1024);
+
+        // 1. Frustum and Distance Culling
+        boolean visible = particleEngine.shouldRenderParticle(10, 64, 10, 10, 64, 10, 10000.0, false);
+        if (!visible) {
+            throw new AssertionError("Near visible particle must not be culled");
+        }
+        boolean occluded = particleEngine.shouldRenderParticle(10, 64, 10, 10, 64, 10, 10000.0, true);
+        if (occluded) {
+            throw new AssertionError("Occluded particle behind opaque wall must be culled");
+        }
+
+        // 2. GPU Batching
+        particleEngine.beginParticleBatch();
+        particleEngine.appendParticle(0f, 64f, 0f, 0f, 0f, 1f, 1f, 0xFFFFFFFF, 15);
+        if (particleEngine.getCurrentParticleCount() != 1) {
+            throw new AssertionError("Batch particle count mismatch");
+        }
+        ByteBuffer batch = particleEngine.finishParticleBatch();
+        if (batch.remaining() != 4 * AdvancedParticleEngine.PARTICLE_VERTEX_STRIDE_BYTES) {
+            throw new AssertionError("Particle batch buffer size mismatch");
+        }
+
+        // 3. Parametric Vector Math (Spiral, Ring, Homing)
+        double[] outPos = new double[3];
+        AdvancedParticleEngine.computeSpiralPos(0, 64, 0, 2.0, 0.5, 3.0, outPos);
+        if (outPos[1] != 65.5) { // 64 + 0.5 * 3
+            throw new AssertionError("Spiral height calculation mismatch");
+        }
+
+        double[] homingVel = new double[3];
+        AdvancedParticleEngine.computeHomingVector(0, 0, 0, 10, 0, 0, 5.0, homingVel);
+        if (Math.abs(homingVel[0] - 5.0) > 1e-4) {
+            throw new AssertionError("Homing velocity magnitude mismatch");
+        }
+
+        particleEngine.freeDirectBuffers();
+    }
+
+    private static void testBadOptimizationsLightmapAndBiomeBlendCache() {
+        BadOptimizationsEngine badOpt = new BadOptimizationsEngine(true);
+
+        // 1. Lightmap Caching (skip calculation when sky and gamma are unchanged)
+        boolean firstUpdate = badOpt.checkAndUpdateLightmapDirty(0.5f, 0.8f, 1.0f);
+        if (!firstUpdate) {
+            throw new AssertionError("Initial lightmap check must trigger update");
+        }
+        boolean secondUpdate = badOpt.checkAndUpdateLightmapDirty(0.5f, 0.8f, 1.0f);
+        if (secondUpdate) {
+            throw new AssertionError("Static lightmap environment must skip recalculation");
+        }
+
+        // 2. Biome Color Blend Fast Caching
+        int grassColor1 = badOpt.getCachedGrassColor(100, 200, () -> 0x55AA55);
+        int grassColor2 = badOpt.getCachedGrassColor(100, 200, () -> 0xFF0000); // Should return cached value
+        if (grassColor1 != 0x55AA55 || grassColor2 != 0x55AA55) {
+            throw new AssertionError("Biome blend cache mismatch");
+        }
+
+        // 3. Debug Overlay String Cache
+        String line1 = badOpt.getCachedDebugLine("fps_counter", () -> "FPS: 240");
+        String line2 = badOpt.getCachedDebugLine("fps_counter", () -> "FPS: 60");
+        if (!line1.equals("FPS: 240") || !line2.equals("FPS: 240")) {
+            throw new AssertionError("Debug line cache mismatch");
+        }
+    }
+
+    private static void testMobtimizationsPathfindingAndTargetPacing() {
+        MobAiOptimizer mobAi = new MobAiOptimizer(true);
+
+        // 1. Pathfinding Redundancy Gate
+        boolean recalcWhenMoving = mobAi.shouldRecalculatePath(true, false, 10.0);
+        if (recalcWhenMoving) {
+            throw new AssertionError("Redundant path recalculation must be suppressed for actively moving mobs");
+        }
+        boolean recalcWhenStuck = mobAi.shouldRecalculatePath(true, true, 10.0);
+        if (!recalcWhenStuck) {
+            throw new AssertionError("Stuck entities must be allowed to recalculate path");
+        }
+
+        // 2. Hazard 3x3x3 Scan Bypass for Monsters
+        boolean monsterHazard = mobAi.shouldPerformHazardScanning(true, false);
+        if (monsterHazard) {
+            throw new AssertionError("Hazard scanning for hostile monsters must be bypassed");
+        }
+        boolean petHazard = mobAi.shouldPerformHazardScanning(false, true);
+        if (!petHazard) {
+            throw new AssertionError("Hazard scanning for player pets must be preserved");
+        }
+
+        // 3. Distance-Adaptive Target Scanning
+        if (mobAi.getTargetAcquisitionInterval(64.0) != 20) {
+            throw new AssertionError("Distant mob (>48 blocks) must scan once every 20 ticks");
+        }
+        if (mobAi.getTargetAcquisitionInterval(5.0) != 1) {
+            throw new AssertionError("Close combat mob must scan every 1 tick");
+        }
+
+        // 4. Heavy Goal Stripping
+        if (mobAi.isTurtleEggSearchPermitted()) {
+            throw new AssertionError("Zombie turtle egg scanning must be stripped");
+        }
+        if (mobAi.shouldExecuteVillageRaidScan(1) || mobAi.shouldExecuteVillageRaidScan(2)) {
+            throw new AssertionError("Village raid scans must be throttled to 1/3 rate");
+        }
+    }
+
+    private static void testPalladiumCapabilityAndMatrixStackCache() {
+        PalladiumCapabilityCache palCache = new PalladiumCapabilityCache(true);
+
+        // 1. Capability Bit State Cache
+        palCache.setCapability(1042, 0xABCDEFL);
+        long cap = palCache.getCapability(1042, 0L);
+        if (cap != 0xABCDEFL) {
+            throw new AssertionError("Palladium capability cache lookup mismatch");
+        }
+
+        // 2. Animation Matrix Transform Cache
+        float[] matrixIn = new float[] {
+            1, 0, 0, 0,
+            0, 1, 0, 0,
+            0, 0, 1, 0,
+            10, 20, 30, 1
+        };
+        palCache.storeAnimationMatrix(1042, matrixIn);
+
+        float[] matrixOut = new float[16];
+        boolean found = palCache.getAnimationMatrix(1042, matrixOut);
+        if (!found || matrixOut[12] != 10.0f || matrixOut[13] != 20.0f) {
+            throw new AssertionError("Animation matrix cache lookup mismatch");
+        }
+
+        palCache.invalidateEntity(1042);
+        if (palCache.getCapability(1042, 0L) != 0L) {
+            throw new AssertionError("Entity invalidation must clear cached capabilities");
+        }
+    }
 }
+
 
 
 

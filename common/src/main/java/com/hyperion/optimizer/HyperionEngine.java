@@ -88,6 +88,12 @@ public final class HyperionEngine {
     private com.hyperion.optimizer.compat.HyperionModCompatManager modCompatManager;
     private com.hyperion.optimizer.compat.IrisShaderCompatPipeline irisShaderPipeline;
 
+    // Advanced Technical Subsystems (Particle Core, BadOptimizations, Mobtimizations, Palladium)
+    private com.hyperion.optimizer.core.particle.AdvancedParticleEngine advancedParticleEngine;
+    private com.hyperion.optimizer.core.micro.BadOptimizationsEngine badOptimizationsEngine;
+    private com.hyperion.optimizer.core.ai.MobAiOptimizer mobAiOptimizer;
+    private com.hyperion.optimizer.core.animation.PalladiumCapabilityCache palladiumCache;
+
     // Multi-Core Multithreading Subsystems
     private HyperionThreadPoolManager threadPoolManager;
     private ParallelChunkMesher parallelChunkMesher;
@@ -275,8 +281,23 @@ public final class HyperionEngine {
         this.modCompatManager = com.hyperion.optimizer.compat.HyperionModCompatManager.getInstance();
         this.irisShaderPipeline = com.hyperion.optimizer.compat.IrisShaderCompatPipeline.getInstance();
 
+        // 17. Advanced Particle Core & Vector Math Engine
+        this.advancedParticleEngine = new com.hyperion.optimizer.core.particle.AdvancedParticleEngine(config.enableFastParticleEngine, 16384);
+        this.advancedParticleEngine.configure(config);
+
+        // 18. BadOptimizations Micro-Optimization Hot-Path Engine
+        this.badOptimizationsEngine = new com.hyperion.optimizer.core.micro.BadOptimizationsEngine(config.enableGpuDrivenRenderer);
+        this.badOptimizationsEngine.configure(config);
+
+        // 19. Mobtimizations Entity AI & Pathfinding Throttle Optimizer
+        this.mobAiOptimizer = new com.hyperion.optimizer.core.ai.MobAiOptimizer(config.enablePathfindingCircuitBreaker);
+        this.mobAiOptimizer.configure(config);
+
+        // 20. Palladium Entity Capability & Animation Matrix Cache
+        this.palladiumCache = new com.hyperion.optimizer.core.animation.PalladiumCapabilityCache(true);
+
         this.initialized = true;
-        LOGGER.info("[Hyperion] Optimizer Core Initialized with Multi-Core, GPU-Driven, Voxel LOD (2048+ Chunks), Mod Compatibility & Crash Guard.");
+        LOGGER.info("[Hyperion] Optimizer Core Initialized with Multi-Core, GPU Voxel LOD (2048+), Particle Core, BadOptimizations & Mob AI.");
     }
 
     public HyperionConfig getConfig() {
@@ -572,6 +593,18 @@ public final class HyperionEngine {
         if (irisShaderPipeline != null) {
             irisShaderPipeline.reset();
         }
+        if (advancedParticleEngine != null) {
+            advancedParticleEngine.freeDirectBuffers();
+        }
+        if (badOptimizationsEngine != null) {
+            badOptimizationsEngine.reset();
+        }
+        if (mobAiOptimizer != null) {
+            mobAiOptimizer.reset();
+        }
+        if (palladiumCache != null) {
+            palladiumCache.reset();
+        }
         LOGGER.info("[Hyperion] Subsystems safely shut down.");
     }
 
@@ -637,5 +670,21 @@ public final class HyperionEngine {
 
     public com.hyperion.optimizer.compat.IrisShaderCompatPipeline getIrisShaderPipeline() {
         return irisShaderPipeline;
+    }
+
+    public com.hyperion.optimizer.core.particle.AdvancedParticleEngine getAdvancedParticleEngine() {
+        return advancedParticleEngine;
+    }
+
+    public com.hyperion.optimizer.core.micro.BadOptimizationsEngine getBadOptimizationsEngine() {
+        return badOptimizationsEngine;
+    }
+
+    public com.hyperion.optimizer.core.ai.MobAiOptimizer getMobAiOptimizer() {
+        return mobAiOptimizer;
+    }
+
+    public com.hyperion.optimizer.core.animation.PalladiumCapabilityCache getPalladiumCache() {
+        return palladiumCache;
     }
 }
