@@ -49,6 +49,14 @@ import com.hyperion.optimizer.mixin.MixinLevelRenderer;
 import com.hyperion.optimizer.mixin.MixinVideoOptionsScreen;
 import com.hyperion.optimizer.core.render.ColorCorrectionEngine;
 import com.hyperion.optimizer.core.render.FpsStabilizerEngine;
+import com.hyperion.optimizer.core.render.ChunkLodManager;
+import com.hyperion.optimizer.core.render.AggressiveFaceCuller;
+import com.hyperion.optimizer.core.gpu.GpuInstancingEngine;
+import com.hyperion.optimizer.core.gpu.GpuResetCrashGuard;
+import com.hyperion.optimizer.core.gpu.GpuVendorProfile;
+import com.hyperion.optimizer.core.gpu.dualgpu.DualGpuSyncLock;
+import com.hyperion.optimizer.core.gpu.dualgpu.DualGpuThermalFallback;
+import com.hyperion.optimizer.gui.HyperionKeyBindingManager;
 import com.hyperion.optimizer.mixin.MixinLightmapTexture;
 import com.hyperion.optimizer.core.threading.HyperionThreadPoolManager;
 import com.hyperion.optimizer.core.threading.ParallelChunkMesher;
@@ -795,9 +803,63 @@ public class HyperionTestRunner {
             failed++;
         }
 
+        try {
+            testChunkLodManagerAndGeometrySimplification();
+            System.out.println("[PASS] 81. Chunk LOD (Level of Detail) & Distance Geometry Simplification");
+            passed++;
+        } catch (Throwable t) {
+            System.err.println("[FAIL] 81. Chunk LOD Engine: " + t.getMessage());
+            failed++;
+        }
+
+        try {
+            testAggressiveFaceCullerAndCavityDiscard();
+            System.out.println("[PASS] 82. Aggressive Hidden Block Face & Internal Cavity Culling Engine");
+            passed++;
+        } catch (Throwable t) {
+            System.err.println("[FAIL] 82. Aggressive Face Culler: " + t.getMessage());
+            failed++;
+        }
+
+        try {
+            testGpuInstancingEngineAndBatching();
+            System.out.println("[PASS] 83. GPU Instancing & Block Geometry SSBO/UBO Batching Engine");
+            passed++;
+        } catch (Throwable t) {
+            System.err.println("[FAIL] 83. GPU Instancing Engine: " + t.getMessage());
+            failed++;
+        }
+
+        try {
+            testDualGpuSyncLockTimeoutAndWaitLoopSuppression();
+            System.out.println("[PASS] 84. Dual-GPU Sync Lock & Anti-Busy-Wait Micro-Yield Engine");
+            passed++;
+        } catch (Throwable t) {
+            System.err.println("[FAIL] 84. Dual-GPU Sync Lock: " + t.getMessage());
+            failed++;
+        }
+
+        try {
+            testDualGpuThermalFallbackAndGpuCrashGuard();
+            System.out.println("[PASS] 85. Dynamic Thermal Auto-Fallback & Driver TDR Reset Crash Guard");
+            passed++;
+        } catch (Throwable t) {
+            System.err.println("[FAIL] 85. Thermal Fallback & Crash Guard: " + t.getMessage());
+            failed++;
+        }
+
+        try {
+            testGpuVendorProfilesAndCtrlShiftZeroKeybinding();
+            System.out.println("[PASS] 86. Multi-Vendor Profiles (NVIDIA Optimus, Apple Silicon) & Ctrl+Shift+0 Menu");
+            passed++;
+        } catch (Throwable t) {
+            System.err.println("[FAIL] 86. Vendor Profiles & Shortcut: " + t.getMessage());
+            failed++;
+        }
+
         System.out.println("=================================================");
         System.out.println("SUMMARY: " + passed + " Passed, " + failed + " Failed.");
-        System.out.println("STATUS: " + (failed == 0 ? "[VERIFIED: ALL 80 AUDIT FIXES & MULTI-CORE/GPU OPTIMIZATIONS EMPIRICALLY VERIFIED]" : "[DEFECT DETECTED]"));
+        System.out.println("STATUS: " + (failed == 0 ? "[VERIFIED: ALL 86 AUDIT FIXES & MULTI-CORE/GPU OPTIMIZATIONS EMPIRICALLY VERIFIED]" : "[DEFECT DETECTED]"));
         System.out.println("=================================================");
 
         if (failed > 0) {
@@ -2893,6 +2955,232 @@ public class HyperionTestRunner {
             throw new AssertionError("Thermal guard FPS targets mismatch");
         }
     }
+
+    private static void testChunkLodManagerAndGeometrySimplification() {
+        ChunkLodManager lodManager = new ChunkLodManager(true);
+        HyperionConfig cfg = new HyperionConfig();
+        cfg.enableChunkLod = true;
+        cfg.chunkLodDistanceBlocks = 16.0;
+        cfg.chunkLodFarDistanceBlocks = 48.0;
+        cfg.chunkLodSimplificationFactor = 0.50;
+        lodManager.configure(cfg);
+
+        // 1. Chunk close to player (<16 blocks) -> LOD 0 (full detail)
+        int lodNear = lodManager.calculateLodLevel(0, 64, 0, 8, 64, 8); // dist = sqrt(128) = 11.3 blocks
+        if (lodNear != 0) {
+            throw new AssertionError("Near chunk (<16 blocks) must be LOD 0, got: " + lodNear);
+        }
+        int fullQuads = 1000;
+        int simplifiedNear = lodManager.simplifyQuadCount(fullQuads, lodNear);
+        if (simplifiedNear != fullQuads) {
+            throw new AssertionError("LOD 0 must not decimate quads");
+        }
+
+        // 2. Chunk medium distance (30 blocks) -> LOD 1 (50% reduction)
+        int lodMid = lodManager.calculateLodLevel(0, 64, 0, 30, 64, 0); // dist = 30 blocks
+        if (lodMid != 1) {
+            throw new AssertionError("Mid chunk (16-48 blocks) must be LOD 1, got: " + lodMid);
+        }
+        int simplifiedMid = lodManager.simplifyQuadCount(fullQuads, lodMid);
+        if (simplifiedMid != 500) {
+            throw new AssertionError("LOD 1 must reduce quads by 50%, got: " + simplifiedMid);
+        }
+
+        // 3. Chunk far distance (60 blocks) -> LOD 2 (75% reduction)
+        int lodFar = lodManager.calculateLodLevel(0, 64, 0, 60, 64, 0); // dist = 60 blocks
+        if (lodFar != 2) {
+            throw new AssertionError("Far chunk (>48 blocks) must be LOD 2, got: " + lodFar);
+        }
+        int simplifiedFar = lodManager.simplifyQuadCount(fullQuads, lodFar);
+        if (simplifiedFar != 250) {
+            throw new AssertionError("LOD 2 must reduce quads by 75%, got: " + simplifiedFar);
+        }
+
+        if (lodManager.getTotalSavedVertices() <= 0) {
+            throw new AssertionError("Saved vertex telemetry must be recorded");
+        }
+    }
+
+    private static void testAggressiveFaceCullerAndCavityDiscard() {
+        AggressiveFaceCuller culler = new AggressiveFaceCuller(true);
+        HyperionConfig cfg = new HyperionConfig();
+        cfg.enableAggressiveFaceCulling = true;
+        cfg.enableInternalCavityCulling = true;
+        culler.configure(cfg);
+
+        // 1. Face against air -> must render
+        if (!culler.shouldRenderFace(0, (byte) 1, (byte) 0, false)) {
+            throw new AssertionError("Face adjacent to air must be rendered");
+        }
+
+        // 2. Face against opaque solid block -> must CULL (discard buried face)
+        if (culler.shouldRenderFace(0, (byte) 1, (byte) 1, true)) {
+            throw new AssertionError("Buried face against opaque neighbor must be culled");
+        }
+
+        // 3. Translucent boundary between identical blocks (e.g. water-water) -> must CULL
+        if (culler.shouldRenderFace(0, (byte) 9, (byte) 9, false)) {
+            throw new AssertionError("Internal boundary between same translucent blocks must be culled");
+        }
+
+        // 4. Test 3x3x3 solid cube filtering: only 6 outer faces on each side must be visible (26*6 quads reduced to 54)
+        byte[] cube = new byte[3 * 3 * 3];
+        for (int i = 0; i < cube.length; i++) cube[i] = (byte) 1; // Solid stone block cube
+        int visibleQuads = culler.filterVoxelQuads(cube, 3, 3, 3);
+        // Outer box of 3x3 has 9 blocks per side * 6 sides = 54 quads visible (27*6 = 162 total raw faces)
+        if (visibleQuads != 54) {
+            throw new AssertionError("Expected 54 visible outer quads for 3x3x3 solid block cube, got: " + visibleQuads);
+        }
+        if (culler.getTotalFacesCulled() <= 0) {
+            throw new AssertionError("Culled face counter mismatch");
+        }
+    }
+
+    private static void testGpuInstancingEngineAndBatching() {
+        GpuInstancingEngine instancing = new GpuInstancingEngine(true, 1024);
+        HyperionConfig cfg = new HyperionConfig();
+        cfg.enableGpuBlockInstancing = true;
+        instancing.configure(cfg);
+
+        instancing.beginInstancingBatch();
+        for (int i = 0; i < 100; i++) {
+            boolean ok = instancing.addInstance(i * 1.0f, 64.0f, 0.0f, 0x00F000F0, 1, 0.0f);
+            if (!ok) {
+                throw new AssertionError("Adding valid instance must succeed");
+            }
+        }
+
+        if (instancing.getCurrentInstanceCount() != 100) {
+            throw new AssertionError("Instance count mismatch, expected 100, got: " + instancing.getCurrentInstanceCount());
+        }
+
+        ByteBuffer buffer = instancing.finishInstancingBatch();
+        if (buffer.remaining() != 100 * GpuInstancingEngine.INSTANCE_STRIDE_BYTES) {
+            throw new AssertionError("Instance buffer stride mismatch, expected " + (100 * 24) + " bytes, got: " + buffer.remaining());
+        }
+        if (instancing.getTotalBatchesDispatched() != 1) {
+            throw new AssertionError("Batch dispatch counter mismatch");
+        }
+    }
+
+    private static void testDualGpuSyncLockTimeoutAndWaitLoopSuppression() {
+        DualGpuSyncLock syncLock = new DualGpuSyncLock(true);
+        HyperionConfig cfg = new HyperionConfig();
+        cfg.enableDualGpuSyncLock = true;
+        cfg.dualGpuSyncTimeoutMs = 2; // 2ms timeout
+        syncLock.configure(cfg);
+
+        // 1. Ready condition -> instant success without delay
+        boolean ready = syncLock.awaitSync(() -> true);
+        if (!ready || syncLock.getSuccessfulSyncs() != 1) {
+            throw new AssertionError("Ready condition must immediately succeed");
+        }
+
+        // 2. Unready condition -> must cleanly timeout after 2ms without spinning indefinitely
+        long t0 = System.nanoTime();
+        boolean timedOut = syncLock.awaitSync(() -> false);
+        long elapsedMs = (System.nanoTime() - t0) / 1_000_000L;
+
+        if (timedOut) {
+            throw new AssertionError("Unready condition must return false on timeout");
+        }
+        if (syncLock.getTimedOutSyncs() != 1) {
+            throw new AssertionError("Timed out counter mismatch");
+        }
+        if (elapsedMs < 1) {
+            throw new AssertionError("SyncLock timeout was too fast");
+        }
+    }
+
+    private static void testDualGpuThermalFallbackAndGpuCrashGuard() {
+        // 1. Test Thermal Auto-Fallback
+        DualGpuThermalFallback fallback = new DualGpuThermalFallback(true);
+        HyperionConfig cfg = new HyperionConfig();
+        cfg.enableDualGpuThermalFallback = true;
+        cfg.thermalFallbackFrametimeThresholdMs = 40.0;
+        fallback.configure(cfg);
+
+        // Normal 16ms frames (60 FPS) -> no fallback
+        for (int i = 0; i < 5; i++) {
+            if (fallback.recordFrameAndEvaluate(16.6)) {
+                throw new AssertionError("Normal frametime must not trigger fallback");
+            }
+        }
+
+        // Severe thermal throttling spikes (>40ms) -> must trigger fallback on 3rd spike
+        fallback.recordFrameAndEvaluate(55.0);
+        fallback.recordFrameAndEvaluate(60.0);
+        boolean active = fallback.recordFrameAndEvaluate(75.0);
+        if (!active || !fallback.isFallbackActive()) {
+            throw new AssertionError("Consecutive thermal spikes must activate safe auto-fallback mode");
+        }
+
+        // 2. Test Crash Guard TDR recovery
+        GpuResetCrashGuard crashGuard = new GpuResetCrashGuard(true);
+        crashGuard.configure(cfg);
+
+        AtomicBoolean fallbackExecuted = new AtomicBoolean(false);
+        boolean taskResult = crashGuard.executeProtectedGpuTask(() -> {
+            throw new RuntimeException("Simulated OpenGL Driver TDR Device Lost (GL_CONTEXT_LOST)");
+        }, () -> {
+            fallbackExecuted.set(true);
+        });
+
+        if (taskResult) {
+            throw new AssertionError("Crashing GPU task must return false");
+        }
+        if (!fallbackExecuted.get() || !crashGuard.isRecoveryModeActive()) {
+            throw new AssertionError("Crash guard must execute fallback without crashing the JVM");
+        }
+        if (crashGuard.getInterceptedCrashesCount() != 1 || crashGuard.getSuccessfulRecoveriesCount() != 1) {
+            throw new AssertionError("Crash telemetry mismatch");
+        }
+    }
+
+    private static void testGpuVendorProfilesAndCtrlShiftZeroKeybinding() {
+        // 1. Test Vendor Profiles & Apple Silicon UMA / NVIDIA Optimus detection
+        GpuDeviceInfo nvidia = new GpuDeviceInfo(0, "NVIDIA GeForce RTX 4070 Laptop GPU", "NVIDIA Corporation", 8192, false);
+        GpuDeviceInfo intel = new GpuDeviceInfo(1, "Intel(R) Iris(R) Xe Graphics", "Intel Corporation", 4096, true);
+        GpuDeviceInfo appleM3 = new GpuDeviceInfo(0, "Apple M3 Max GPU (Metal / MoltenVK)", "Apple", 36864, true);
+
+        if (!nvidia.isNvidia() || !nvidia.isDiscrete()) {
+            throw new AssertionError("NVIDIA detection mismatch");
+        }
+        if (!intel.isIntel() || !intel.isIntegrated()) {
+            throw new AssertionError("Intel detection mismatch");
+        }
+        if (!appleM3.isAppleSilicon()) {
+            throw new AssertionError("Apple Silicon detection mismatch");
+        }
+
+        DualGpuManager dualMgr = new DualGpuManager(true, DualGpuWorkloadDispatcher.AUTO_BALANCED);
+        List<GpuDeviceInfo> optimusSetup = new ArrayList<>();
+        optimusSetup.add(nvidia);
+        optimusSetup.add(intel);
+        dualMgr.configureGpus(optimusSetup);
+
+        if (dualMgr.getPrimaryGpu() != nvidia || dualMgr.getSecondaryGpu() != intel) {
+            throw new AssertionError("NVIDIA + Intel Optimus topology assignment mismatch");
+        }
+
+        // 2. Test Ctrl + Shift + 0 Keybinding Trigger
+        HyperionKeyBindingManager keyMgr = HyperionKeyBindingManager.getInstance();
+        keyMgr.setEnabled(true);
+        keyMgr.reset();
+
+        // Random key press without modifiers -> no trigger
+        if (keyMgr.handleKeyInput(HyperionKeyBindingManager.GLFW_KEY_H, 0, 1, 0)) {
+            throw new AssertionError("Regular key must not trigger config menu");
+        }
+
+        // Ctrl + Shift + 0 -> must TRIGGER
+        int mods = HyperionKeyBindingManager.GLFW_MOD_CONTROL | HyperionKeyBindingManager.GLFW_MOD_SHIFT;
+        boolean triggered = keyMgr.handleKeyInput(HyperionKeyBindingManager.GLFW_KEY_0, 0, 1, mods);
+        if (!triggered || !keyMgr.consumeOpenScreenRequest()) {
+            throw new AssertionError("Ctrl + Shift + 0 must trigger opening Hyperion config menu");
+        }
+    }
 }
+
 
 

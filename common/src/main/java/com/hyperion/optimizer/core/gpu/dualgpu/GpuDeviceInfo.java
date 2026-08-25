@@ -59,6 +59,13 @@ public final class GpuDeviceInfo {
         return n.contains("intel") || n.contains("iris") || n.contains("uhd") || n.contains("arc") || v.contains("intel");
     }
 
+    public boolean isAppleSilicon() {
+        String n = name.toLowerCase();
+        String v = vendor.toLowerCase();
+        return n.contains("apple") || n.contains("m1") || n.contains("m2") || n.contains("m3") || n.contains("m4") ||
+               v.contains("apple") || n.contains("metal") || n.contains("moltenvk");
+    }
+
     @Override
     public String toString() {
         return String.format("[%d] %s (%s, %d MB VRAM, %s)",

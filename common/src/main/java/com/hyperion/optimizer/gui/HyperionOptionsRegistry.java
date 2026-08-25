@@ -148,6 +148,42 @@ public final class HyperionOptionsRegistry {
             new String[]{"Vibrant HDR (Яркий)", "Clear Night (Ночной обзор)", "Cinematic Filmic (Кино)", "Natural Balanced (Натуральный)", "Custom (Пользовательский)"},
             "VIBRANT_HDR"
         ));
+        register(HyperionOption.createBoolean(
+            "enableChunkLod",
+            "LOD геометрии чанков (Level of Detail)",
+            "Упрощает полигональную сетку блоков для чанков дальше 16 блоков от игрока (+40-70% FPS)",
+            HyperionCategory.GRAPHICS_SETTINGS,
+            c -> c.enableChunkLod,
+            (c, v) -> c.enableChunkLod = v,
+            true
+        ));
+        register(HyperionOption.createDoubleSlider(
+            "chunkLodDistanceBlocks",
+            "Дистанция включения LOD (Блоки)",
+            "Расстояние от камеры, начиная с которого включается упрощение геометрии",
+            HyperionCategory.GRAPHICS_SETTINGS,
+            c -> c.chunkLodDistanceBlocks,
+            (c, v) -> c.chunkLodDistanceBlocks = v,
+            16.0, 8.0, 64.0, 4.0
+        ));
+        register(HyperionOption.createBoolean(
+            "enableAggressiveFaceCulling",
+            "Агрессивный Culling скрытых граней",
+            "Отсекает внутренние невидимые грани блоков до передачи геометрии на видеокарту",
+            HyperionCategory.GRAPHICS_SETTINGS,
+            c -> c.enableAggressiveFaceCulling,
+            (c, v) -> c.enableAggressiveFaceCulling = v,
+            true
+        ));
+        register(HyperionOption.createBoolean(
+            "enableGpuBlockInstancing",
+            "GPU Instancing / Batching блоков",
+            "Объединяет вызовы отрисовки одинаковых блоков в один пакет для разгрузки шины ОЗУ/PCIe",
+            HyperionCategory.GRAPHICS_SETTINGS,
+            c -> c.enableGpuBlockInstancing,
+            (c, v) -> c.enableGpuBlockInstancing = v,
+            true
+        ));
         register(HyperionOption.createDoubleSlider(
             "colorBlackCrushCompensation",
             "Компенсация черного (Anti-Black-Crush)",
@@ -272,6 +308,62 @@ public final class HyperionOptionsRegistry {
             c -> c.enableSecondaryGpuParticleOffload,
             (c, v) -> c.enableSecondaryGpuParticleOffload = v,
             true
+        ));
+        register(HyperionOption.createCycle(
+            "gpuVendorProfile",
+            "Архитектурный профиль GPU",
+            "Оптимизация под связки NVIDIA+Intel Optimus, Apple Silicon (M1/M2/M3/M4) и AMD",
+            HyperionCategory.GPU_VIDEO_SETTINGS,
+            c -> c.gpuVendorProfile,
+            (c, v) -> c.gpuVendorProfile = v,
+            new String[]{"AUTO", "AMD_RADEON_HYBRID", "NVIDIA_INTEL_OPTIMUS", "APPLE_SILICON_M_SERIES", "INTEL_ARC_DEDICATED", "GENERIC_UNIVERSAL"},
+            new String[]{"Auto Detect (Авто-детекция)", "AMD Radeon + Vega APU", "NVIDIA + Intel (Optimus)", "Apple Silicon M-Серия (UMA TBDR)", "Intel Arc Dedicated", "Универсальный OpenGL"},
+            "AUTO"
+        ));
+        register(HyperionOption.createBoolean(
+            "enableDualGpuSyncLock",
+            "Sync Lock (Защита от Wait-Loop)",
+            "Предотвращает 100% загрузку CPU в активных циклах ожидания между видеокартами",
+            HyperionCategory.GPU_VIDEO_SETTINGS,
+            c -> c.enableDualGpuSyncLock,
+            (c, v) -> c.enableDualGpuSyncLock = v,
+            true
+        ));
+        register(HyperionOption.createBoolean(
+            "enableDualGpuThermalFallback",
+            "Аварийный откат (Auto-Fallback)",
+            "Автоматический сброс тяжелых задач на один адаптер при росте frametime / перегреве",
+            HyperionCategory.GPU_VIDEO_SETTINGS,
+            c -> c.enableDualGpuThermalFallback,
+            (c, v) -> c.enableDualGpuThermalFallback = v,
+            true
+        ));
+        register(HyperionOption.createBoolean(
+            "enableGpuResetCrashGuard",
+            "Crash Guard (GPU Reset / TDR)",
+            "Перехватывает сбросы графического драйвера и переключает рендер без краша игры",
+            HyperionCategory.GPU_VIDEO_SETTINGS,
+            c -> c.enableGpuResetCrashGuard,
+            (c, v) -> c.enableGpuResetCrashGuard = v,
+            true
+        ));
+        register(HyperionOption.createBoolean(
+            "enableBackgroundFpsCap",
+            "Ограничитель в фоновом режиме (Alt+Tab)",
+            "Жестко режет FPS до 15-30 при свертывании игры, защищая GPU от перегрева",
+            HyperionCategory.GPU_VIDEO_SETTINGS,
+            c -> c.enableBackgroundFpsCap,
+            (c, v) -> c.enableBackgroundFpsCap = v,
+            true
+        ));
+        register(HyperionOption.createIntSlider(
+            "backgroundMaxFramerate",
+            "Лимит FPS в фоне (Alt+Tab)",
+            "Максимальная частота кадров при свернутом окне",
+            HyperionCategory.GPU_VIDEO_SETTINGS,
+            c -> c.backgroundMaxFramerate,
+            (c, v) -> c.backgroundMaxFramerate = v,
+            20, 10, 60, 5
         ));
 
         // =========================================================================

@@ -71,6 +71,11 @@ public final class HyperionEngine {
     private com.hyperion.optimizer.core.render.FancyGraphicsOptimizer fancyGraphicsOptimizer;
     private com.hyperion.optimizer.core.render.FastCloudEngine fastCloudEngine;
     private com.hyperion.optimizer.core.gpu.GpuThermalPowerGuard gpuThermalGuard;
+    private com.hyperion.optimizer.core.render.ChunkLodManager chunkLodManager;
+    private com.hyperion.optimizer.core.render.AggressiveFaceCuller aggressiveFaceCuller;
+    private com.hyperion.optimizer.core.gpu.GpuInstancingEngine gpuInstancingEngine;
+    private com.hyperion.optimizer.core.gpu.GpuResetCrashGuard gpuCrashGuard;
+    private com.hyperion.optimizer.gui.HyperionKeyBindingManager keyBindingManager;
 
     // Multi-Core Multithreading Subsystems
     private HyperionThreadPoolManager threadPoolManager;
@@ -230,8 +235,20 @@ public final class HyperionEngine {
         this.gpuThermalGuard = new com.hyperion.optimizer.core.gpu.GpuThermalPowerGuard(config.enableGpuThermalPowerGuard);
         this.gpuThermalGuard.configure(config);
 
+        // 14. Chunk LOD, Aggressive Face Culling, GPU Instancing, Crash Guard & Keybindings
+        this.chunkLodManager = new com.hyperion.optimizer.core.render.ChunkLodManager(config.enableChunkLod);
+        this.chunkLodManager.configure(config);
+        this.aggressiveFaceCuller = new com.hyperion.optimizer.core.render.AggressiveFaceCuller(config.enableAggressiveFaceCulling);
+        this.aggressiveFaceCuller.configure(config);
+        this.gpuInstancingEngine = new com.hyperion.optimizer.core.gpu.GpuInstancingEngine(config.enableGpuBlockInstancing, config.maxInstancesPerBatch);
+        this.gpuInstancingEngine.configure(config);
+        this.gpuCrashGuard = new com.hyperion.optimizer.core.gpu.GpuResetCrashGuard(config.enableGpuResetCrashGuard);
+        this.gpuCrashGuard.configure(config);
+        this.keyBindingManager = com.hyperion.optimizer.gui.HyperionKeyBindingManager.getInstance();
+        this.keyBindingManager.setEnabled(config.enableConfigMenuShortcut);
+
         this.initialized = true;
-        LOGGER.info("[Hyperion] Optimizer Core Initialized with Multi-Core, GPU, HD Texture, Fast Cloud & Thermal Power Guard.");
+        LOGGER.info("[Hyperion] Optimizer Core Initialized with Multi-Core, GPU-Driven, Chunk LOD, Aggressive Culling, GPU Instancing & Crash Guard.");
     }
 
     public HyperionConfig getConfig() {
@@ -417,6 +434,21 @@ public final class HyperionEngine {
             if (gpuThermalGuard != null) {
                 gpuThermalGuard.configure(newConfig);
             }
+            if (chunkLodManager != null) {
+                chunkLodManager.configure(newConfig);
+            }
+            if (aggressiveFaceCuller != null) {
+                aggressiveFaceCuller.configure(newConfig);
+            }
+            if (gpuInstancingEngine != null) {
+                gpuInstancingEngine.configure(newConfig);
+            }
+            if (gpuCrashGuard != null) {
+                gpuCrashGuard.configure(newConfig);
+            }
+            if (keyBindingManager != null) {
+                keyBindingManager.setEnabled(newConfig.enableConfigMenuShortcut);
+            }
             LOGGER.info("[Hyperion] Configuration hot-reloaded successfully.");
         }
     }
@@ -470,6 +502,21 @@ public final class HyperionEngine {
         if (gpuThermalGuard != null) {
             gpuThermalGuard.reset();
         }
+        if (chunkLodManager != null) {
+            chunkLodManager.reset();
+        }
+        if (aggressiveFaceCuller != null) {
+            aggressiveFaceCuller.reset();
+        }
+        if (gpuInstancingEngine != null) {
+            gpuInstancingEngine.reset();
+        }
+        if (gpuCrashGuard != null) {
+            gpuCrashGuard.reset();
+        }
+        if (keyBindingManager != null) {
+            keyBindingManager.reset();
+        }
         LOGGER.info("[Hyperion] Subsystems safely shut down.");
     }
 
@@ -487,5 +534,25 @@ public final class HyperionEngine {
 
     public com.hyperion.optimizer.core.gpu.GpuThermalPowerGuard getGpuThermalGuard() {
         return gpuThermalGuard;
+    }
+
+    public com.hyperion.optimizer.core.render.ChunkLodManager getChunkLodManager() {
+        return chunkLodManager;
+    }
+
+    public com.hyperion.optimizer.core.render.AggressiveFaceCuller getAggressiveFaceCuller() {
+        return aggressiveFaceCuller;
+    }
+
+    public com.hyperion.optimizer.core.gpu.GpuInstancingEngine getGpuInstancingEngine() {
+        return gpuInstancingEngine;
+    }
+
+    public com.hyperion.optimizer.core.gpu.GpuResetCrashGuard getGpuCrashGuard() {
+        return gpuCrashGuard;
+    }
+
+    public com.hyperion.optimizer.gui.HyperionKeyBindingManager getKeyBindingManager() {
+        return keyBindingManager;
     }
 }

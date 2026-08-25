@@ -26,6 +26,10 @@ public final class DualGpuManager {
     private boolean offloadLight = true;
     private boolean offloadParticles = true;
 
+    private final DualGpuSyncLock syncLock = new DualGpuSyncLock(true);
+    private final DualGpuThermalFallback thermalFallback = new DualGpuThermalFallback(true);
+    private com.hyperion.optimizer.core.gpu.GpuVendorProfile vendorProfile = com.hyperion.optimizer.core.gpu.GpuVendorProfile.AUTO;
+
     private final AtomicLong interGpuTransferredBytes = new AtomicLong(0);
 
     public DualGpuManager(boolean enabled, DualGpuWorkloadDispatcher mode) {
@@ -116,7 +120,7 @@ public final class DualGpuManager {
     }
 
     public boolean isDualGpuActive() {
-        return enabled && mode != DualGpuWorkloadDispatcher.OFF && primaryGpu != null && secondaryGpu != null;
+        return enabled && mode != DualGpuWorkloadDispatcher.OFF && primaryGpu != null && secondaryGpu != null && !thermalFallback.isFallbackActive();
     }
 
     public boolean shouldOffloadHudToSecondary() {
@@ -129,6 +133,24 @@ public final class DualGpuManager {
 
     public boolean shouldOffloadParticlesToSecondary() {
         return isDualGpuActive() && offloadParticles;
+    }
+
+    public DualGpuSyncLock getSyncLock() {
+        return syncLock;
+    }
+
+    public DualGpuThermalFallback getThermalFallback() {
+        return thermalFallback;
+    }
+
+    public com.hyperion.optimizer.core.gpu.GpuVendorProfile getVendorProfile() {
+        return vendorProfile;
+    }
+
+    public void setVendorProfile(com.hyperion.optimizer.core.gpu.GpuVendorProfile profile) {
+        if (profile != null) {
+            this.vendorProfile = profile;
+        }
     }
 
     public void recordInterGpuTransfer(long bytes) {

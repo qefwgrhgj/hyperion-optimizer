@@ -35,6 +35,20 @@ public class HyperionConfig {
     public double animationLodNearDistance = 12.0;
     public double animationLodFarDistance = 28.0;
 
+    // Chunk Level of Detail (LOD) & Geometry Simplification
+    public boolean enableChunkLod = true;
+    public double chunkLodDistanceBlocks = 16.0;
+    public double chunkLodFarDistanceBlocks = 48.0;
+    public double chunkLodSimplificationFactor = 0.50;
+
+    // Aggressive Internal Face Culling
+    public boolean enableAggressiveFaceCulling = true;
+    public boolean enableInternalCavityCulling = true;
+
+    // GPU Instancing & Block Batching
+    public boolean enableGpuBlockInstancing = true;
+    public int maxInstancesPerBatch = 16384;
+
     // HD Resource Packs & Fancy/Fabulous Graphics
     public boolean enableHdTextureOptimization = true;
     public boolean enableAsyncAnimatedTextures = true;
@@ -65,6 +79,23 @@ public class HyperionConfig {
     public boolean enableSecondaryGpuHudOffload = true;
     public boolean enableSecondaryGpuLightOffload = true;
     public boolean enableSecondaryGpuParticleOffload = true;
+
+    // Multi-Vendor GPU Profiles (NVIDIA Optimus, Apple Silicon M-series, Intel Arc, AMD)
+    public String gpuVendorProfile = "AUTO"; // AUTO, AMD_RADEON_HYBRID, NVIDIA_INTEL_OPTIMUS, APPLE_SILICON_M_SERIES, INTEL_ARC_DEDICATED, GENERIC_UNIVERSAL
+
+    // Dual-GPU Desynchronization & Wait-Loop Suppressor (Sync Lock)
+    public boolean enableDualGpuSyncLock = true;
+    public long dualGpuSyncTimeoutMs = 5;
+
+    // Emergency Auto-Fallback on Thermal Throttling
+    public boolean enableDualGpuThermalFallback = true;
+    public double thermalFallbackFrametimeThresholdMs = 40.0;
+
+    // GPU Reset & Driver TDR Crash Guard
+    public boolean enableGpuResetCrashGuard = true;
+
+    // GUI Menu Global Shortcut (Ctrl + Shift + 0)
+    public boolean enableConfigMenuShortcut = true;
 
     // GPU Thermal & Power Spike Guard (Anti-Coil-Whine)
     public boolean enableGpuThermalPowerGuard = true;
