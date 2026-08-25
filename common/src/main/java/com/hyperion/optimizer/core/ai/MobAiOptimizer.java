@@ -91,6 +91,18 @@ public final class MobAiOptimizer {
     }
 
     /**
+     * Phase-Staggered Target Acquisition Check.
+     * Distributes entity AI scanning evenly across all 20 ticks of every second
+     * using (entityId + worldTick) % interval, completely eliminating wave tick spikes.
+     */
+    public boolean shouldExecuteTargetScan(int entityId, long worldTick, double distToNearestPlayerBlocks) {
+        if (!enabled || !enableTargetScanPacing) return true;
+        int interval = getTargetAcquisitionInterval(distToNearestPlayerBlocks);
+        if (interval <= 1) return true;
+        return (Math.abs(entityId) + worldTick) % interval == 0;
+    }
+
+    /**
      * Checks if zombie turtle egg scanning is permitted.
      */
     public boolean isTurtleEggSearchPermitted() {

@@ -67,7 +67,7 @@ public final class GpuInstancingEngine {
     public synchronized ByteBuffer finishInstancingBatch() {
         instanceDataBuffer.flip();
         totalBatchesDispatched.incrementAndGet();
-        return instanceDataBuffer.asReadOnlyBuffer();
+        return instanceDataBuffer.asReadOnlyBuffer().order(ByteOrder.nativeOrder());
     }
 
     public synchronized int getCurrentInstanceCount() {

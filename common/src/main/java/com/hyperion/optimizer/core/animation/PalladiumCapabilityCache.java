@@ -15,6 +15,8 @@ import java.util.concurrent.atomic.LongAdder;
 public final class PalladiumCapabilityCache {
     private volatile boolean enabled = true;
 
+    public static final int MAX_TRACKED_ENTRIES = 2048;
+
     // Cache: entityId -> packed capability attribute bits
     private final Map<Integer, Long> entityCapabilityMap = new ConcurrentHashMap<>(256);
     // Cache: entityId -> cached transform matrix (16 floats)
@@ -29,6 +31,9 @@ public final class PalladiumCapabilityCache {
 
     public void setCapability(int entityId, long packedCapabilityBits) {
         if (!enabled) return;
+        if (entityCapabilityMap.size() >= MAX_TRACKED_ENTRIES) {
+            entityCapabilityMap.clear(); // Prune stale entity entries
+        }
         entityCapabilityMap.put(entityId, packedCapabilityBits);
     }
 
@@ -44,8 +49,22 @@ public final class PalladiumCapabilityCache {
 
     public void storeAnimationMatrix(int entityId, float[] matrix16) {
         if (!enabled || matrix16 == null || matrix16.length < 16) return;
+        if (animationMatrixMap.size() >= MAX_TRACKED_ENTRIES) {
+            animationMatrixMap.clear();
+        }
         float[] dest = animationMatrixMap.computeIfAbsent(entityId, k -> new float[16]);
         System.arraycopy(matrix16, 0, dest, 0, 16);
+    }
+
+    public void storeScaledAnimationMatrix(int entityId, float scale, float[] matrix16) {
+        if (!enabled || matrix16 == null || matrix16.length < 16) return;
+        if (animationMatrixMap.size() >= MAX_TRACKED_ENTRIES) {
+            animationMatrixMap.clear();
+        }
+        float[] dest = animationMatrixMap.computeIfAbsent(entityId, k -> new float[16]);
+        for (int i = 0; i < 16; i++) {
+            dest[i] = matrix16[i] * scale;
+        }
     }
 
     public boolean getAnimationMatrix(int entityId, float[] outMatrix16) {

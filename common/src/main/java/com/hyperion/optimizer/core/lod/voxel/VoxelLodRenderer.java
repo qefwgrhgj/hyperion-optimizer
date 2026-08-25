@@ -71,7 +71,7 @@ public final class VoxelLodRenderer {
     public synchronized ByteBuffer finishLodFrame() {
         indirectCommandBuffer.flip();
         totalIndirectDrawsDispatched.incrementAndGet();
-        return indirectCommandBuffer.asReadOnlyBuffer();
+        return indirectCommandBuffer.asReadOnlyBuffer().order(ByteOrder.nativeOrder());
     }
 
     public synchronized int getActiveDrawCommands() {

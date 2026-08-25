@@ -74,21 +74,31 @@ public final class AdvancedParticleEngine {
     }
 
     /**
-     * Appends a particle quad to the batch buffer.
+     * Appends a particle quad with custom width/height to the batch buffer.
      */
-    public synchronized boolean appendParticle(float x, float y, float z, float u0, float v0, float u1, float v1, int colorRgba, int light) {
+    public synchronized boolean appendParticle(float x, float y, float z, float sizeX, float sizeY, float u0, float v0, float u1, float v1, int colorRgba, int light) {
         if (!enabled || currentParticleCount >= maxBatchedParticles) {
             return false;
         }
 
+        float hx = Math.max(0.01f, sizeX * 0.5f);
+        float hy = Math.max(0.01f, sizeY * 0.5f);
+
         // Write 4 vertices for the billboard quad
-        writeVertex(x - 0.1f, y - 0.1f, z, u0, v0, colorRgba, light);
-        writeVertex(x + 0.1f, y - 0.1f, z, u1, v0, colorRgba, light);
-        writeVertex(x + 0.1f, y + 0.1f, z, u1, v1, colorRgba, light);
-        writeVertex(x - 0.1f, y + 0.1f, z, u0, v1, colorRgba, light);
+        writeVertex(x - hx, y - hy, z, u0, v0, colorRgba, light);
+        writeVertex(x + hx, y - hy, z, u1, v0, colorRgba, light);
+        writeVertex(x + hx, y + hy, z, u1, v1, colorRgba, light);
+        writeVertex(x - hx, y + hy, z, u0, v1, colorRgba, light);
 
         currentParticleCount++;
         return true;
+    }
+
+    /**
+     * Appends a default-sized particle quad to the batch buffer.
+     */
+    public synchronized boolean appendParticle(float x, float y, float z, float u0, float v0, float u1, float v1, int colorRgba, int light) {
+        return appendParticle(x, y, z, 0.2f, 0.2f, u0, v0, u1, v1, colorRgba, light);
     }
 
     private void writeVertex(float x, float y, float z, float u, float v, int color, int light) {
@@ -104,7 +114,7 @@ public final class AdvancedParticleEngine {
     public synchronized ByteBuffer finishParticleBatch() {
         batchedParticleBuffer.flip();
         totalBatchesRendered.increment();
-        return batchedParticleBuffer.asReadOnlyBuffer();
+        return batchedParticleBuffer.asReadOnlyBuffer().order(ByteOrder.nativeOrder());
     }
 
     // =========================================================================

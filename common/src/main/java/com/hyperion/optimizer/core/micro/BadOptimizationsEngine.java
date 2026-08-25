@@ -21,10 +21,13 @@ public final class BadOptimizationsEngine {
     private volatile boolean enableBiomeBlendCaching = true;
     private volatile boolean enableDebugOverlayCaching = true;
 
+    public static final int MAX_CACHE_ENTRIES = 4096;
+
     // 1. Lightmap State Cache
     private float lastSkyDarken = -1.0f;
     private float lastBlockLightFactor = -1.0f;
     private float lastGamma = -1.0f;
+    private String currentDimensionId = "minecraft:overworld";
     private boolean isLightmapDirty = true;
 
     // 2. Biome Blend Fast Cache (Key: (chunkX << 16) | chunkZ)
@@ -46,6 +49,18 @@ public final class BadOptimizationsEngine {
     public void configure(HyperionConfig config) {
         if (config == null) return;
         this.enabled = config.enableGpuDrivenRenderer; // Enabled along with main performance core
+    }
+
+    public void onDimensionChanged(String newDimensionId) {
+        this.currentDimensionId = newDimensionId != null ? newDimensionId : "minecraft:overworld";
+        markLightmapDirty();
+        invalidateBiomeCaches();
+    }
+
+    public void invalidateBiomeCaches() {
+        grassColorCache.clear();
+        foliageColorCache.clear();
+        waterColorCache.clear();
     }
 
     // =========================================================================
@@ -83,6 +98,10 @@ public final class BadOptimizationsEngine {
             return calculator != null ? calculator.getAsInt() : 0;
         }
 
+        if (grassColorCache.size() >= MAX_CACHE_ENTRIES) {
+            grassColorCache.clear(); // Prune on long flights to prevent OOM
+        }
+
         long key = (((long) (blockX >> 2)) << 32) | ((long) (blockZ >> 2) & 0xFFFFFFFFL);
         Integer cached = grassColorCache.get(key);
         if (cached != null) {
@@ -98,6 +117,10 @@ public final class BadOptimizationsEngine {
     public int getCachedFoliageColor(int blockX, int blockZ, java.util.function.IntSupplier calculator) {
         if (!enabled || !enableBiomeBlendCaching || calculator == null) {
             return calculator != null ? calculator.getAsInt() : 0;
+        }
+
+        if (foliageColorCache.size() >= MAX_CACHE_ENTRIES) {
+            foliageColorCache.clear();
         }
 
         long key = (((long) (blockX >> 2)) << 32) | ((long) (blockZ >> 2) & 0xFFFFFFFFL);
