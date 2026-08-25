@@ -93,7 +93,7 @@ public final class HyperionThreadPoolManager {
                 60L, TimeUnit.SECONDS,
                 new LinkedBlockingQueue<>(2048),
                 new NamedThreadFactory("Hyperion-Entity-Worker", Thread.NORM_PRIORITY + 1),
-                new ThreadPoolExecutor.DiscardOldestPolicy()
+                new ThreadPoolExecutor.CallerRunsPolicy()
         );
 
         this.lightEnginePool = new ThreadPoolExecutor(
@@ -101,7 +101,7 @@ public final class HyperionThreadPoolManager {
                 60L, TimeUnit.SECONDS,
                 new LinkedBlockingQueue<>(4096),
                 new NamedThreadFactory("Hyperion-Light-Worker", Thread.NORM_PRIORITY),
-                new ThreadPoolExecutor.DiscardOldestPolicy()
+                new ThreadPoolExecutor.CallerRunsPolicy()
         );
 
         this.worldCacheIoPool = new ThreadPoolExecutor(

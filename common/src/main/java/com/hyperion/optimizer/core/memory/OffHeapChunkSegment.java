@@ -65,7 +65,7 @@ public final class OffHeapChunkSegment {
 
     public void free() {
         if (isFreed.compareAndSet(false, true)) {
-            // Mark segment as freed
+            DirectMemoryCleaner.freeDirectBuffer(directBuffer);
         }
     }
 

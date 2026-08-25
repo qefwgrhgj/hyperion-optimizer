@@ -82,11 +82,15 @@ public final class VoxelHierarchicalMipTree {
         return downsampled;
     }
 
+    private static final ThreadLocal<int[]> HISTOGRAM_BUFFER = ThreadLocal.withInitial(() -> new int[256]);
+
     /**
      * Finds the dominant non-air voxel inside a sub-cube of size (step x step x step).
+     * Zero-allocation routine using reusable thread-local histogram buffer.
      */
     private int findDominantVoxel(byte[] data, int startX, int startY, int startZ, int step) {
-        int[] counts = new int[256];
+        int[] counts = HISTOGRAM_BUFFER.get();
+        Arrays.fill(counts, 0);
         int maxCount = 0;
         int dominantId = 0;
 

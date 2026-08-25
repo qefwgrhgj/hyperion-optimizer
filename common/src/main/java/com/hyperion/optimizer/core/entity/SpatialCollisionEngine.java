@@ -123,6 +123,13 @@ public class SpatialCollisionEngine {
         return false; // Full 20 Hz tick
     }
 
+    /**
+     * Halves pairwise collision checks by enforcing unique evaluation order (idA < idB).
+     */
+    public static boolean shouldEvaluatePair(int entityIdA, int entityIdB) {
+        return entityIdA < entityIdB;
+    }
+
     public boolean isEnabled() {
         return enabled;
     }

@@ -43,19 +43,21 @@ public final class AsyncWorldTickDispatcher {
         if (isFlushing.compareAndSet(false, true)) {
             lightPool.submit(() -> {
                 try {
-                    Runnable r;
-                    while ((r = asyncWorldTasks.poll()) != null) {
-                        pendingQueueSize.decrementAndGet();
-                        try {
-                            r.run();
-                            completedTasks.increment();
-                        } catch (Throwable t) {
-                            // Suppress individual task errors to prevent worker death
+                    do {
+                        Runnable r;
+                        while ((r = asyncWorldTasks.poll()) != null) {
+                            pendingQueueSize.decrementAndGet();
+                            try {
+                                r.run();
+                                completedTasks.increment();
+                            } catch (Throwable t) {
+                                // Suppress individual task errors to prevent worker death
+                            }
                         }
-                    }
+                    } while (!asyncWorldTasks.isEmpty());
                 } finally {
                     isFlushing.set(false);
-                    // Check if more tasks arrived while finishing
+                    // Final safety drain check
                     if (!asyncWorldTasks.isEmpty()) {
                         triggerAsyncDrain();
                     }
