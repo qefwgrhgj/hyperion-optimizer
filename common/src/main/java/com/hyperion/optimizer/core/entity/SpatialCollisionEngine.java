@@ -64,13 +64,17 @@ public class SpatialCollisionEngine {
         registerEntity(entity);
     }
 
+    public static final int MAX_ENTITIES_PER_BUCKET = 64;
+
     public void registerEntity(CollidableEntity entity) {
         if (!enabled || entity == null) return;
         entity.collisionCheckCount = 0;
         long bucket = packSpatialBucket(entity.x, entity.z);
         List<CollidableEntity> list = spatialGrid.computeIfAbsent(bucket, k -> new ArrayList<>(8));
         synchronized (list) {
-            list.add(entity);
+            if (list.size() < MAX_ENTITIES_PER_BUCKET) {
+                list.add(entity);
+            }
         }
     }
 

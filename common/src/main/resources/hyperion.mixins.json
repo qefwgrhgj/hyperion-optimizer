@@ -19,7 +19,8 @@
     "MixinSoundEngine",
     "MixinClientPlayNetworkHandler",
     "MixinParticleManager",
-    "MixinLightmapTexture"
+    "MixinLightmapTexture",
+    "MixinKeyboard"
   ],
   "injectors": {
     "defaultRequire": 1

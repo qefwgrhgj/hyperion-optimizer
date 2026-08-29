@@ -137,6 +137,15 @@ public final class HyperionOptionsRegistry {
             (c, v) -> c.enableColorCorrection = v,
             true
         ));
+        register(HyperionOption.createBoolean(
+            "enableTexturePackColorCorrection",
+            "Цветокоррекция текстур-паков (Resource Pack Color Grading)",
+            "Применяет HDR тонемаппинг, сочность и устранение бандинга прямо к текстурам и спрайтам ресурс-пака",
+            HyperionCategory.GRAPHICS_SETTINGS,
+            c -> c.enableTexturePackColorCorrection,
+            (c, v) -> c.enableTexturePackColorCorrection = v,
+            true
+        ));
         register(HyperionOption.createCycle(
             "colorGradingMode",
             "Профиль цветокоррекции",
@@ -632,6 +641,15 @@ public final class HyperionOptionsRegistry {
             HyperionCategory.COLOR_CORRECTION,
             c -> c.enableColorCorrection,
             (c, v) -> c.enableColorCorrection = v,
+            true
+        ));
+        register(HyperionOption.createBoolean(
+            "enableTexturePackColorCorrection",
+            "Цветокоррекция текстур-паков (Resource Pack Color Grading)",
+            "Применяет HDR тонемаппинг, сочность и устранение бандинга прямо к текстурам и спрайтам ресурс-пака",
+            HyperionCategory.COLOR_CORRECTION,
+            c -> c.enableTexturePackColorCorrection,
+            (c, v) -> c.enableTexturePackColorCorrection = v,
             true
         ));
         register(HyperionOption.createCycle(

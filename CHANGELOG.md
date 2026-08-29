@@ -4,6 +4,19 @@ All notable changes to the **Hyperion Optimizer** project will be documented in 
 
 ---
 
+## [1.0.4] — 2026-08-29
+
+### 🎨 HD Resource Pack & Texture Rendering Fixes
+* **Alpha-Bleed Dilation & Black Border Elimination:** Implemented edge dilation algorithm in `FastHdTextureEngine` that propagates neighbor RGB colors into transparent pixels ($A=0$), eliminating dark outlines and black fringes on leaves, flowers, glass, saplings, and HUD icons with HD texture packs.
+* **Full Mipmap Chain Integrity:** Fixed OpenGL missing-LOD blackness where clamped mipmap levels caused distant terrain blocks to sample non-existent texture levels and render as pitch-black voids.
+* **Animated Sprite Frame 0 Guarantee & UI Bypass:** Fixed initial frame upload for custom animated textures in resource packs (`.mcmeta` animations), ensuring frame 0 is always rendered and UI/inventory items (compass, clock, items) never freeze or black out.
+* **Transparent & Bushy Leaves Cavity Safety:** `FancyGraphicsOptimizer` now detects transparent/bushy leaves from custom resource packs (Stay True, Better Leaves, Faithful 3D) and preserves internal faces to prevent hollow black cavities inside trees.
+* **Lightmap 0xFF Alpha & ABGR Byte-Order Safety:** Enforced opaque $0\text{xFF}$ alpha on lightmap samplers and safe ambient light floors ($>0.035$) in `ColorCorrectionEngine`, preventing black-crush collapse in shadows.
+* **Static Chest Custom Pack Fallback:** `StaticChestMeshBaker` now supports custom texture pack bypass, ensuring chests with custom entity textures or 3D models render without missing texture or black block glitches.
+* **Resource Pack Reload (F3+T) Subsystem Invalidation:** Added `HyperionEngine.onResourceReload()` to automatically flush all animated sprite trackers, biome blend caches, and lightmap dirty states when switching texture packs.
+
+---
+
 ## [1.0.3 Release] — 2026-08-25
 
 ### 🌟 Major Architectural Breakthroughs & Integrations

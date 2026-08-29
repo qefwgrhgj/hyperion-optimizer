@@ -18,13 +18,14 @@ public final class VoxelSectionStorage {
     private final LongAdder totalCompressedBytes = new LongAdder();
 
     /**
-     * Packs Section Coordinate (cx, cy, cz, mip) into a single 64-bit integer key with 24-bit coordinate range (±8,388,608 blocks).
+     * Packs Section Coordinate (cx, cy, cz, mip) into a collision-free 64-bit key supporting
+     * Minecraft 1.18+ negative section heights (-128 to +895) and ±16M chunk coordinates.
      */
     public static long packSectionKey(int chunkX, int sectionY, int chunkZ, int mipLevel) {
         long key = 0L;
-        key |= ((long) (chunkX & 0xFFFFFF)) << 36;
-        key |= ((long) (chunkZ & 0xFFFFFF)) << 12;
-        key |= ((long) (sectionY & 0xFF)) << 4;
+        key |= (((long) (chunkX + 16777216)) & 0x1FFFFFFL) << 39;
+        key |= (((long) (chunkZ + 16777216)) & 0x1FFFFFFL) << 14;
+        key |= (((long) (sectionY + 128)) & 0x3FFL) << 4;
         key |= ((long) (mipLevel & 0xF));
         return key;
     }

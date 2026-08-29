@@ -25,4 +25,26 @@ public class MixinLightmapTexture {
             outRgb[2] = b;
         }
     }
+
+    public static void onProcessTexture(int[] pixels, int width, int height) {
+        ColorCorrectionEngine engine = HyperionEngine.getInstance().getColorCorrectionEngine();
+        if (engine != null && engine.isEnabled()) {
+            engine.processTexture(pixels, width, height);
+        }
+    }
+
+    public static void onProcessTextureAbgr(int[] pixels, int width, int height) {
+        ColorCorrectionEngine engine = HyperionEngine.getInstance().getColorCorrectionEngine();
+        if (engine != null && engine.isEnabled()) {
+            engine.processTextureAbgr(pixels, width, height);
+        }
+    }
+
+    public static int onGradeBiomeColor(int argb) {
+        ColorCorrectionEngine engine = HyperionEngine.getInstance().getColorCorrectionEngine();
+        if (engine != null && engine.isEnabled()) {
+            return engine.gradeColorRgbInt(argb);
+        }
+        return argb;
+    }
 }

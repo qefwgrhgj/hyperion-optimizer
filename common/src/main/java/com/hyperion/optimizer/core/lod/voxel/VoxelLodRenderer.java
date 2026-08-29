@@ -57,6 +57,11 @@ public final class VoxelLodRenderer {
             return false;
         }
 
+        // Mutual exclusion / Shader pass safety
+        if (!com.hyperion.optimizer.compat.IrisShaderCompatPipeline.getInstance().shouldRenderVoxelLodInCurrentPass()) {
+            return false;
+        }
+
         indirectCommandBuffer.putInt(indexCount);
         indirectCommandBuffer.putInt(instanceCount);
         indirectCommandBuffer.putInt(firstIndex);

@@ -15,6 +15,7 @@ public final class IrisShaderCompatPipeline {
 
     private final AtomicBoolean shaderPackActive = new AtomicBoolean(false);
     private final AtomicBoolean shadowPassActive = new AtomicBoolean(false);
+    private volatile String currentPassName = "none";
 
     private IrisShaderCompatPipeline() {}
 
@@ -38,6 +39,22 @@ public final class IrisShaderCompatPipeline {
         return shadowPassActive.get();
     }
 
+    public void setCurrentPassName(String passName) {
+        this.currentPassName = passName != null ? passName : "none";
+    }
+
+    public String getCurrentPassName() {
+        return currentPassName;
+    }
+
+    /**
+     * Ensures Decoupled HUD is only composited during or after composite_final pass when shaders are active.
+     */
+    public boolean shouldRenderDecoupledHudNow() {
+        if (!shaderPackActive.get()) return true;
+        return "composite_final".equalsIgnoreCase(currentPassName) || "final".equalsIgnoreCase(currentPassName) || "none".equalsIgnoreCase(currentPassName);
+    }
+
     /**
      * Determines whether voxel LOD rendering should proceed given current shader pass.
      */
@@ -50,5 +67,6 @@ public final class IrisShaderCompatPipeline {
     public void reset() {
         shaderPackActive.set(false);
         shadowPassActive.set(false);
+        currentPassName = "none";
     }
 }

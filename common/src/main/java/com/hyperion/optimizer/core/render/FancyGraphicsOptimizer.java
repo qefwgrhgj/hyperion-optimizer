@@ -50,16 +50,24 @@ public final class FancyGraphicsOptimizer {
 
     /**
      * Determines whether a face between two adjacent leaves blocks can be culled on Fancy graphics.
-     * Culls internal faces between identical solid leaves to eliminate 50-65% quad overhead in forests.
+     * Culls internal faces ONLY when leaves are solid/opaque blocks.
+     * If leaves are transparent/cutout (bushy leaves / HD resource packs), never cull internal faces
+     * to prevent hollow black cavities inside tree foliage.
      */
-    public boolean shouldCullLeavesFace(boolean isNeighborLeaves, boolean isSameLeavesType) {
+    public boolean shouldCullLeavesFace(boolean isNeighborLeaves, boolean isSameLeavesType, boolean areLeavesOpaque) {
         if (!enabled || !smartLeavesCulling) return false;
+        // On transparent / cutout leaves (HD packs & Fancy graphics), preserving inner faces prevents black cavities
+        if (!areLeavesOpaque) return false;
 
         if (isNeighborLeaves && isSameLeavesType) {
             culledLeavesFacesCount.incrementAndGet();
-            return true; // Cull occluded internal face
+            return true; // Cull occluded internal face on solid leaves
         }
         return false;
+    }
+
+    public boolean shouldCullLeavesFace(boolean isNeighborLeaves, boolean isSameLeavesType) {
+        return shouldCullLeavesFace(isNeighborLeaves, isSameLeavesType, true);
     }
 
     /**

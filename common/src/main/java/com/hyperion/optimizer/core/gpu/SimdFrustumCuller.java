@@ -8,13 +8,19 @@ public final class SimdFrustumCuller {
         if (proj == null || mod == null || proj.length < 16 || mod.length < 16) {
             return;
         }
+        for (int i = 0; i < 16; i++) {
+            if (Float.isNaN(proj[i]) || Float.isInfinite(proj[i]) || Float.isNaN(mod[i]) || Float.isInfinite(mod[i])) {
+                return;
+            }
+        }
+        // Correct OpenGL clip matrix: Projection * ModelView
         for (int i = 0; i < 4; i++) {
             for (int j = 0; j < 4; j++) {
                 clip[i * 4 + j] =
-                    mod[i * 4 + 0] * proj[0 * 4 + j] +
-                    mod[i * 4 + 1] * proj[1 * 4 + j] +
-                    mod[i * 4 + 2] * proj[2 * 4 + j] +
-                    mod[i * 4 + 3] * proj[3 * 4 + j];
+                    proj[i * 4 + 0] * mod[0 * 4 + j] +
+                    proj[i * 4 + 1] * mod[1 * 4 + j] +
+                    proj[i * 4 + 2] * mod[2 * 4 + j] +
+                    proj[i * 4 + 3] * mod[3 * 4 + j];
             }
         }
 
@@ -23,13 +29,13 @@ public final class SimdFrustumCuller {
         // Left
         setPlane(1, clip[3] + clip[0], clip[7] + clip[4], clip[11] + clip[8], clip[15] + clip[12]);
         // Bottom
-        setPlane(2, clip[3] + clip[1], clip[7] + clip[4 + 1], clip[11] + clip[8 + 1], clip[15] + clip[12 + 1]);
+        setPlane(2, clip[3] + clip[1], clip[7] + clip[5], clip[11] + clip[9], clip[15] + clip[13]);
         // Top
-        setPlane(3, clip[3] - clip[1], clip[7] - clip[4 + 1], clip[11] - clip[8 + 1], clip[15] - clip[12 + 1]);
+        setPlane(3, clip[3] - clip[1], clip[7] - clip[5], clip[11] - clip[9], clip[15] - clip[13]);
         // Far
-        setPlane(4, clip[3] - clip[2], clip[7] - clip[4 + 2], clip[11] - clip[8 + 2], clip[15] - clip[12 + 2]);
+        setPlane(4, clip[3] - clip[2], clip[7] - clip[6], clip[11] - clip[10], clip[15] - clip[14]);
         // Near
-        setPlane(5, clip[3] + clip[2], clip[7] + clip[4 + 2], clip[11] + clip[8 + 2], clip[15] + clip[12 + 2]);
+        setPlane(5, clip[3] + clip[2], clip[7] + clip[6], clip[11] + clip[10], clip[15] + clip[14]);
     }
 
     private void setPlane(int index, float a, float b, float c, float d) {

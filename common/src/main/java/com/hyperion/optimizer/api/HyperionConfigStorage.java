@@ -311,6 +311,7 @@ public final class HyperionConfigStorage {
         sb.append("  \"colorNightAmbientBoost\": ").append(c.colorNightAmbientBoost).append(",\n");
         sb.append("  \"colorTemperature\": ").append(c.colorTemperature).append(",\n");
         sb.append("  \"enableColorDebanding\": ").append(c.enableColorDebanding).append(",\n");
+        sb.append("  \"enableTexturePackColorCorrection\": ").append(c.enableTexturePackColorCorrection).append(",\n");
 
         // 2. Video Cards / GPU
         sb.append("  \"enableAmdHardwareAcceleration\": ").append(c.enableAmdHardwareAcceleration).append(",\n");
@@ -427,6 +428,7 @@ public final class HyperionConfigStorage {
         if (map.containsKey("colorNightAmbientBoost")) c.colorNightAmbientBoost = parseDouble(map.get("colorNightAmbientBoost"), c.colorNightAmbientBoost);
         if (map.containsKey("colorTemperature")) c.colorTemperature = parseInt(map.get("colorTemperature"), c.colorTemperature);
         if (map.containsKey("enableColorDebanding")) c.enableColorDebanding = Boolean.parseBoolean(map.get("enableColorDebanding"));
+        if (map.containsKey("enableTexturePackColorCorrection")) c.enableTexturePackColorCorrection = Boolean.parseBoolean(map.get("enableTexturePackColorCorrection"));
 
         // GPU / Video Cards
         if (map.containsKey("enableAmdHardwareAcceleration")) c.enableAmdHardwareAcceleration = Boolean.parseBoolean(map.get("enableAmdHardwareAcceleration"));
@@ -503,20 +505,29 @@ public final class HyperionConfigStorage {
 
     private static Map<String, String> parseSimpleJsonMap(String json) {
         Map<String, String> map = new LinkedHashMap<>();
-        String[] lines = json.split("\n");
+        // Strip block comments /* ... */
+        String sanitized = json.replaceAll("/\\*.*?\\*/", "");
+        String[] lines = sanitized.split("\n");
         for (String line : lines) {
             String trimmed = line.trim();
-            if (trimmed.startsWith("{") || trimmed.startsWith("}") || trimmed.startsWith("//") || trimmed.isEmpty()) {
+            // Strip inline comments
+            int commentIdx = trimmed.indexOf("//");
+            if (commentIdx >= 0) {
+                trimmed = trimmed.substring(0, commentIdx).trim();
+            }
+            if (trimmed.startsWith("{") || trimmed.startsWith("}") || trimmed.isEmpty()) {
                 continue;
             }
             int colonIdx = trimmed.indexOf(':');
             if (colonIdx > 0) {
-                String keyPart = trimmed.substring(0, colonIdx).trim().replace("\"", "");
+                String keyPart = trimmed.substring(0, colonIdx).trim().replace("\"", "").trim();
                 String valPart = trimmed.substring(colonIdx + 1).trim();
                 if (valPart.endsWith(",")) {
                     valPart = valPart.substring(0, valPart.length() - 1).trim();
                 }
-                valPart = valPart.replace("\"", "");
+                if (valPart.startsWith("\"") && valPart.endsWith("\"") && valPart.length() >= 2) {
+                    valPart = valPart.substring(1, valPart.length() - 1);
+                }
                 map.put(keyPart, valPart);
             }
         }

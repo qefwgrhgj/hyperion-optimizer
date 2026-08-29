@@ -4,6 +4,8 @@ import java.util.concurrent.ConcurrentHashMap;
 
 public class StaticChestMeshBaker {
     private final boolean enabled;
+    private volatile boolean customTexturePackActive = false;
+    private volatile boolean customModelModActive = false;
     // Track chests that are currently open (and thus need dynamic 3D lid animation)
     private final ConcurrentHashMap<Long, Boolean> openChests = new ConcurrentHashMap<>();
 
@@ -11,8 +13,24 @@ public class StaticChestMeshBaker {
         this.enabled = enabled;
     }
 
+    public void setCustomTexturePackActive(boolean active) {
+        this.customTexturePackActive = active;
+    }
+
+    public boolean isCustomTexturePackActive() {
+        return customTexturePackActive;
+    }
+
+    public void setCustomModelModActive(boolean active) {
+        this.customModelModActive = active;
+    }
+
+    public boolean isCustomModelModActive() {
+        return customModelModActive;
+    }
+
     public boolean shouldRenderAsStaticBlock(long packedBlockPos) {
-        if (!enabled) return false;
+        if (!enabled || customTexturePackActive || customModelModActive) return false;
         // If chest is closed (not in openChests map), render as static solid block in chunk mesh
         return !openChests.containsKey(packedBlockPos);
     }

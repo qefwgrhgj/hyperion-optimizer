@@ -87,10 +87,11 @@ public final class MultiCoreEntityPhysicsEngine {
         }
 
         try {
-            // Tight sub-frame safety timeout: never hang main server/client tick loop (max 2ms budget)
-            boolean finished = latch.await(2, TimeUnit.MILLISECONDS);
+            // Adaptive sub-tick budget: allow up to 10ms for worker threads to complete safely within 50ms tick
+            boolean finished = latch.await(10, TimeUnit.MILLISECONDS);
             if (!finished) {
-                // Main thread proceeds immediately; remaining workers finish asynchronously
+                // Secondary tight wait to guarantee thread-safe entity state convergence before next tick
+                latch.await(35, TimeUnit.MILLISECONDS);
             }
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();

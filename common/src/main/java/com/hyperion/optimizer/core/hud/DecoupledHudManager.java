@@ -36,6 +36,11 @@ public class DecoupledHudManager {
     public boolean shouldRepaintHud(long currentTimeNanos) {
         if (!enabled) return true;
 
+        // Iris & Oculus shader pass coordination: defer HUD repaint during intermediate passes
+        if (!com.hyperion.optimizer.compat.IrisShaderCompatPipeline.getInstance().shouldRenderDecoupledHudNow()) {
+            return false;
+        }
+
         if (!isFramebufferValid) {
             isFramebufferValid = true;
             lastRenderTimeNanos = currentTimeNanos;

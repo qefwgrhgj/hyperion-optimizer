@@ -28,14 +28,20 @@ public final class DirectMemoryCleaner {
             f.setAccessible(true);
             unsafe = f.get(null);
 
-            // Java 9+ Unsafe.invokeCleaner(ByteBuffer)
             try {
                 invokeCleaner = unsafeClass.getMethod("invokeCleaner", ByteBuffer.class);
-            } catch (NoSuchMethodException ignored) {
-                // Java 8 fallback
+            } catch (NoSuchMethodException ignored) {}
+        } catch (Throwable t1) {
+            // Fallback for modular JDKs without sun.misc.Unsafe accessibility
+            try {
+                Class<?> jdkUnsafeClass = Class.forName("jdk.internal.misc.Unsafe");
+                Method getUnsafeMethod = jdkUnsafeClass.getMethod("getUnsafe");
+                getUnsafeMethod.setAccessible(true);
+                unsafe = getUnsafeMethod.invoke(null);
+                invokeCleaner = jdkUnsafeClass.getMethod("invokeCleaner", ByteBuffer.class);
+            } catch (Throwable t2) {
+                LOGGER.fine("[Hyperion] Native Unsafe not directly accessible: " + t2.getMessage());
             }
-        } catch (Throwable t) {
-            LOGGER.fine("[Hyperion] Native Unsafe not directly accessible: " + t.getMessage());
         }
 
         UNSAFE_INSTANCE = unsafe;
@@ -52,26 +58,33 @@ public final class DirectMemoryCleaner {
             return false;
         }
 
-        try {
-            if (UNSAFE_INSTANCE != null && INVOKE_CLEANER_METHOD != null) {
-                // Java 9+ standard direct clean
+        // Path 1: Unsafe.invokeCleaner (Java 9 - 25+)
+        if (UNSAFE_INSTANCE != null && INVOKE_CLEANER_METHOD != null) {
+            try {
                 INVOKE_CLEANER_METHOD.invoke(UNSAFE_INSTANCE, buffer);
                 return true;
-            } else if (UNSAFE_INSTANCE != null) {
-                // Java 8 Cleaner.clean()
-                Method cleanerMethod = buffer.getClass().getMethod("cleaner");
-                cleanerMethod.setAccessible(true);
-                Object cleaner = cleanerMethod.invoke(buffer);
-                if (cleaner != null) {
-                    Method cleanMethod = cleaner.getClass().getMethod("clean");
-                    cleanMethod.setAccessible(true);
-                    cleanMethod.invoke(cleaner);
-                    return true;
-                }
-            }
-        } catch (Throwable t) {
-            LOGGER.fine("[Hyperion] Manual buffer cleaning fallback: " + t.getMessage());
+            } catch (Throwable ignored) {}
         }
+
+        // Path 2: DirectBuffer.cleaner().clean() (Java 8 - 16)
+        try {
+            Method cleanerMethod = buffer.getClass().getMethod("cleaner");
+            cleanerMethod.setAccessible(true);
+            Object cleaner = cleanerMethod.invoke(buffer);
+            if (cleaner != null) {
+                Method cleanMethod = cleaner.getClass().getMethod("clean");
+                cleanMethod.setAccessible(true);
+                cleanMethod.invoke(cleaner);
+                return true;
+            }
+        } catch (Throwable ignored) {}
+
+        // Path 3: Direct attachment deallocation
+        try {
+            Field attachmentField = buffer.getClass().getDeclaredField("att");
+            attachmentField.setAccessible(true);
+            attachmentField.set(buffer, null);
+        } catch (Throwable ignored) {}
 
         return false;
     }

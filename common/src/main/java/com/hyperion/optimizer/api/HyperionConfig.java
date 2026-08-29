@@ -28,6 +28,7 @@ public class HyperionConfig {
     public double colorNightAmbientBoost = 0.10;
     public int colorTemperature = 6500;
     public boolean enableColorDebanding = true;
+    public boolean enableTexturePackColorCorrection = true;
     public boolean enableStaticFastChests = true;
     public boolean enableEntityDepthCulling = true;
     public double entityCullingMaxDistance = 64.0;

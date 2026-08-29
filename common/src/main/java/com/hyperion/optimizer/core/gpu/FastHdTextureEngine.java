@@ -31,6 +31,8 @@ public final class FastHdTextureEngine {
 
     // Map of sprite identifier to visibility status
     private final ConcurrentHashMap<String, Long> visibleSpriteLastRenderTick = new ConcurrentHashMap<>();
+    // Set of sprites that have completed at least one frame upload (guarantees frame 0 is never black)
+    private final java.util.Set<String> initializedSprites = ConcurrentHashMap.newKeySet();
 
     public FastHdTextureEngine(boolean enabled) {
         this.enabled = enabled;
@@ -46,7 +48,8 @@ public final class FastHdTextureEngine {
 
     /**
      * Evaluates if an animated texture (water, lava, fire, portal, custom emissive) should update this tick.
-     * Prevents transferring dozens of megabytes per tick for offscreen animated blocks.
+     * Prevents transferring dozens of megabytes per tick for offscreen animated blocks,
+     * while guaranteeing frame 0 is ALWAYS uploaded and UI/handheld items are never throttled into blackness.
      */
     public boolean shouldUpdateAnimatedSprite(String spriteName, int spriteWidth, int spriteHeight,
                                              boolean isVisibleInFrustum, long currentTick) {
@@ -54,8 +57,24 @@ public final class FastHdTextureEngine {
 
         activeAnimatedSpritesCount.incrementAndGet();
 
-        // 1. If sprite is not visible in current player view frustum, throttle updates to 1 Hz instead of 20 Hz
-        if (!isVisibleInFrustum) {
+        // 1. Initial Frame Guarantee: Sprite MUST upload frame 0 at least once to avoid black uninitialized texture
+        if (spriteName != null && initializedSprites.add(spriteName)) {
+            visibleSpriteLastRenderTick.put(spriteName, currentTick);
+            long frameBytes = (long) spriteWidth * (long) spriteHeight * 4L;
+            uploadedAnimationBytesThisSecond.addAndGet(frameBytes);
+            return true;
+        }
+
+        // 2. UI / Handheld / Special Items bypass frustum culling to prevent frozen/black item textures
+        if (isUiOrHandheldSprite(spriteName)) {
+            visibleSpriteLastRenderTick.put(spriteName != null ? spriteName : "", currentTick);
+            long frameBytes = (long) spriteWidth * (long) spriteHeight * 4L;
+            uploadedAnimationBytesThisSecond.addAndGet(frameBytes);
+            return true;
+        }
+
+        // 3. If sprite is not visible in current player view frustum, throttle updates to 1 Hz instead of 20 Hz
+        if (!isVisibleInFrustum && spriteName != null) {
             Long lastTick = visibleSpriteLastRenderTick.get(spriteName);
             if (lastTick != null && (currentTick - lastTick) < 20L) {
                 throttledAnimationsCount.incrementAndGet();
@@ -63,33 +82,156 @@ public final class FastHdTextureEngine {
             }
         }
 
-        visibleSpriteLastRenderTick.put(spriteName, currentTick);
+        if (spriteName != null) {
+            visibleSpriteLastRenderTick.put(spriteName, currentTick);
+        }
 
-        // 2. Track upload payload (Width * Height * 4 bytes RGBA)
+        // 4. Track upload payload (Width * Height * 4 bytes RGBA)
         long frameBytes = (long) spriteWidth * (long) spriteHeight * 4L;
         uploadedAnimationBytesThisSecond.addAndGet(frameBytes);
 
         return true;
     }
 
+    private static boolean isUiOrHandheldSprite(String spriteName) {
+        if (spriteName == null) return true;
+        String s = spriteName.toLowerCase();
+        return s.contains("item/") || s.contains("items/") || s.contains("gui/") ||
+               s.contains("compass") || s.contains("clock") || s.contains("hud") ||
+               s.contains("particle") || s.contains("glint");
+    }
+
     /**
      * Calculates optimal mipmap levels for HD resource packs based on resolution and VRAM constraints.
-     * Prevents generating excessive mip levels that cause texture blur or huge GC heap churn.
+     * Prevents generating excessive mip levels while guaranteeing full mipmap chain integrity
+     * so distant textures NEVER sample missing levels (which OpenGL renders as pitch black).
      */
     public int calculateOptimalMipmapLevels(int textureWidth, int textureHeight, int requestedLevels, long availableVramMb) {
-        if (!enabled || !adaptiveMipmaps) return requestedLevels;
+        if (!enabled || !adaptiveMipmaps) return Math.max(0, requestedLevels);
 
-        int maxDimension = Math.max(textureWidth, textureHeight);
-        int maxPossibleLevels = 31 - Integer.numberOfLeadingZeros(maxDimension);
+        int minDimension = Math.min(textureWidth, textureHeight);
+        if (minDimension <= 0) return 0;
+        int maxPossibleLevels = 31 - Integer.numberOfLeadingZeros(minDimension);
 
-        // For high-res textures (256x+) on 2GB or lower VRAM, clamp mipmaps to prevent atlas explosion
-        if (maxDimension >= 512 && availableVramMb <= 2048) {
-            return Math.min(requestedLevels, 2);
-        } else if (maxDimension >= 256 && availableVramMb <= 1024) {
-            return Math.min(requestedLevels, 3);
+        // Guarantee complete valid mip chain without orphan missing levels
+        return Math.min(Math.max(0, requestedLevels), Math.max(0, maxPossibleLevels));
+    }
+
+    /**
+     * Alpha-Bleed / Edge Dilation Filter for HD Resource Packs.
+     * 
+     * In texture packs, transparent pixels (A=0) often have RGB=(0,0,0). When downscaled during mipmapping,
+     * linear filtering blends adjacent solid colors with transparent black, creating dark outlines / black borders
+     * around leaves, foliage, glass, saplings, and icons.
+     * This filter propagates edge colors into adjacent transparent pixels, completely eliminating black border artifacts.
+     */
+    public static void dilateAlphaBleed(int[] pixels, int width, int height) {
+        if (pixels == null || width <= 1 || height <= 1 || pixels.length < width * height) return;
+
+        int total = width * height;
+        int[] pass = new int[total];
+        boolean hasTransparent = false;
+
+        for (int i = 0; i < total; i++) {
+            int argb = pixels[i];
+            int a = (argb >> 24) & 0xFF;
+            if (a == 0) {
+                hasTransparent = true;
+            }
         }
 
-        return Math.min(requestedLevels, Math.max(0, maxPossibleLevels));
+        if (!hasTransparent) return; // No transparent pixels to dilate
+
+        System.arraycopy(pixels, 0, pass, 0, total);
+
+        for (int y = 0; y < height; y++) {
+            for (int x = 0; x < width; x++) {
+                int idx = y * width + x;
+                int argb = pixels[idx];
+                int a = (argb >> 24) & 0xFF;
+
+                if (a == 0) {
+                    // Average RGB of non-transparent 4-connected neighbors
+                    int sumR = 0, sumG = 0, sumB = 0, count = 0;
+
+                    if (x > 0) {
+                        int n = pixels[idx - 1];
+                        if (((n >> 24) & 0xFF) > 0) {
+                            sumR += (n >> 16) & 0xFF;
+                            sumG += (n >> 8) & 0xFF;
+                            sumB += n & 0xFF;
+                            count++;
+                        }
+                    }
+                    if (x < width - 1) {
+                        int n = pixels[idx + 1];
+                        if (((n >> 24) & 0xFF) > 0) {
+                            sumR += (n >> 16) & 0xFF;
+                            sumG += (n >> 8) & 0xFF;
+                            sumB += n & 0xFF;
+                            count++;
+                        }
+                    }
+                    if (y > 0) {
+                        int n = pixels[idx - width];
+                        if (((n >> 24) & 0xFF) > 0) {
+                            sumR += (n >> 16) & 0xFF;
+                            sumG += (n >> 8) & 0xFF;
+                            sumB += n & 0xFF;
+                            count++;
+                        }
+                    }
+                    if (y < height - 1) {
+                        int n = pixels[idx + width];
+                        if (((n >> 24) & 0xFF) > 0) {
+                            sumR += (n >> 16) & 0xFF;
+                            sumG += (n >> 8) & 0xFF;
+                            sumB += n & 0xFF;
+                            count++;
+                        }
+                    }
+
+                    if (count > 0) {
+                        int avgR = sumR / count;
+                        int avgG = sumG / count;
+                        int avgB = sumB / count;
+                        pass[idx] = (avgR << 16) | (avgG << 8) | avgB; // Retain alpha 0 with neighbor color
+                    }
+                }
+            }
+        }
+
+        System.arraycopy(pass, 0, pixels, 0, total);
+    }
+
+    /**
+     * Unified Alpha-Bleed Dilation & Color Correction pipeline for HD Texture Packs.
+     * Guarantees smooth edge blending, rich HDR vibrance, and zero black borders or alpha distortion.
+     */
+    public static void dilateAndColorCorrectTexturePack(int[] pixels, int width, int height, boolean isAbgr, com.hyperion.optimizer.core.render.ColorCorrectionEngine colorEngine) {
+        if (pixels == null || width <= 0 || height <= 0) return;
+
+        // 1. Apply ACES Filmic & Vibrance Color Correction to texture pixels
+        if (colorEngine != null && colorEngine.isEnabled()) {
+            if (isAbgr) {
+                colorEngine.processTextureAbgr(pixels, width, height);
+            } else {
+                colorEngine.processTexture(pixels, width, height);
+            }
+        }
+
+        // 2. Propagate edge colors into adjacent transparent pixels to prevent dark mipmap outlines
+        dilateAlphaBleed(pixels, width, height);
+    }
+
+    /**
+     * Complete texture pack buffer pre-upload processing with telemetry accounting.
+     */
+    public void processTexturePackUpload(int[] pixels, int width, int height, boolean isAbgr, com.hyperion.optimizer.core.render.ColorCorrectionEngine colorEngine) {
+        if (!enabled || pixels == null) return;
+        dilateAndColorCorrectTexturePack(pixels, width, height, isAbgr, colorEngine);
+        long bytes = (long) width * (long) height * 4L;
+        uploadedAnimationBytesThisSecond.addAndGet(bytes);
     }
 
     /**
@@ -115,6 +257,15 @@ public final class FastHdTextureEngine {
      */
     public int clampTextureDimension(int requestedDimension) {
         return Math.min(requestedDimension, maxAtlasDimension);
+    }
+
+    /**
+     * Flushes all cached sprite tracking and resets animated texture state upon resource pack reload.
+     */
+    public void onResourceReload() {
+        visibleSpriteLastRenderTick.clear();
+        initializedSprites.clear();
+        resetFrameMetrics();
     }
 
     public void resetFrameMetrics() {

@@ -16,6 +16,13 @@ public class SleepingHopperManager {
     public boolean isHopperSleeping(long packedPos, long currentServerTick) {
         if (!enabled) return false;
 
+        // Server tick rollback defense (/time set 0 or NTP sync): clear all sleeping hoppers to prevent permanent lock
+        if (currentServerTick < lastCleanupTick && (lastCleanupTick - currentServerTick) > 100L) {
+            sleepingHoppers.clear();
+            this.lastCleanupTick = currentServerTick;
+            return false;
+        }
+
         // Auto-prune expired sleeping hoppers periodically in background without stalling main tick
         if (currentServerTick < lastCleanupTick || (currentServerTick - lastCleanupTick) > CLEANUP_INTERVAL_TICKS) {
             this.lastCleanupTick = currentServerTick;

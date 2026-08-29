@@ -11,6 +11,8 @@ import java.util.concurrent.atomic.LongAdder;
  * redstone propagation queues, lighting dirty updates) to asynchronous CPU worker threads.
  */
 public final class AsyncWorldTickDispatcher {
+    public static final int MAX_PENDING_TASKS = 8192;
+
     private final boolean enabled;
     private final ConcurrentLinkedQueue<Runnable> asyncWorldTasks = new ConcurrentLinkedQueue<>();
     private final java.util.concurrent.atomic.AtomicInteger pendingQueueSize = new java.util.concurrent.atomic.AtomicInteger(0);
@@ -27,6 +29,14 @@ public final class AsyncWorldTickDispatcher {
     public void queueAsyncTask(Runnable task) {
         if (task == null) return;
         if (!enabled || lightPool == null || lightPool.isShutdown()) {
+            task.run();
+            dispatchedTasks.increment();
+            completedTasks.increment();
+            return;
+        }
+
+        // Bounded queue backpressure protection: run synchronously if overloaded
+        if (pendingQueueSize.get() >= MAX_PENDING_TASKS) {
             task.run();
             dispatchedTasks.increment();
             completedTasks.increment();

@@ -156,6 +156,12 @@ public final class ColorCorrectionEngine {
             b = fastGamma(b);
         }
 
+        // 8. Safe Ambient Floor Guarantee: Prevent shadows from collapsing to pure black (0x000000)
+        float minAmbientFloor = 0.035f + (nightAmbientBoost * 0.05f * clamp01(nightFactor));
+        r = Math.max(minAmbientFloor, r);
+        g = Math.max(minAmbientFloor, g);
+        b = Math.max(minAmbientFloor, b);
+
         outRgb[0] = clamp01(r);
         outRgb[1] = clamp01(g);
         outRgb[2] = clamp01(b);
@@ -206,6 +212,7 @@ public final class ColorCorrectionEngine {
     /**
      * Fast in-place transformation of Minecraft's 16x16 (256 elements) ARGB Lightmap.
      * 100% Zero allocations & SIMD-friendly LUT execution.
+     * Enforces opaque 0xFF Alpha to prevent lightmap sample discard / black textures.
      */
     public void processLightmap(int[] lightmapPixels, int width, int height, float nightFactor) {
         if (!enabled || lightmapPixels == null) return;
@@ -217,6 +224,8 @@ public final class ColorCorrectionEngine {
                 int argb = lightmapPixels[index];
 
                 int a = (argb >> 24) & 0xFF;
+                if (a == 0) a = 0xFF; // Enforce opaque alpha for lightmap shader sampler
+
                 float r = ((argb >> 16) & 0xFF) / 255.0f;
                 float g = ((argb >> 8) & 0xFF) / 255.0f;
                 float b = (argb & 0xFF) / 255.0f;
@@ -228,6 +237,181 @@ public final class ColorCorrectionEngine {
                 int outB = Math.min(255, Math.max(0, (int) (temp[2] * 255.0f + 0.5f)));
 
                 lightmapPixels[index] = (a << 24) | (outR << 16) | (outG << 8) | outB;
+            }
+        }
+    }
+
+    /**
+     * Applies ACES Filmic + Vibrance + Contrast color grading to raw texture/sprite RGB triples.
+     * Preserves true zero black levels (no ambient floor lift) and highlight normalization.
+     */
+    public void gradeTextureRgb(float r, float g, float b, float[] outRgb) {
+        if (!enabled) {
+            outRgb[0] = clamp01(r);
+            outRgb[1] = clamp01(g);
+            outRgb[2] = clamp01(b);
+            return;
+        }
+
+        // 1. Color Temperature (Kelvin) White Balance
+        if (colorTemperature != 6500) {
+            applyColorTemperature(r, g, b, outRgb);
+            r = outRgb[0];
+            g = outRgb[1];
+            b = outRgb[2];
+        }
+
+        // 2. Contrast Adjustment around mid-gray 0.5
+        if (contrast != 1.0f) {
+            r = (r - 0.5f) * contrast + 0.5f;
+            g = (g - 0.5f) * contrast + 0.5f;
+            b = (b - 0.5f) * contrast + 0.5f;
+        }
+
+        // 3. Normalized ACES Filmic Tone Mapping with Hue Preservation
+        if (mode == Mode.VIBRANT_HDR || mode == Mode.CINEMATIC_FILMIC) {
+            float lumPre = 0.2126f * Math.max(0.0f, r) + 0.7152f * Math.max(0.0f, g) + 0.0722f * Math.max(0.0f, b);
+            float lumMapped = acesTonemap(lumPre);
+            if (lumPre > 0.00001f) {
+                float scale = lumMapped / lumPre;
+                float rChan = acesTonemap(r);
+                float gChan = acesTonemap(g);
+                float bChan = acesTonemap(b);
+                r = 0.85f * (r * scale) + 0.15f * rChan;
+                g = 0.85f * (g * scale) + 0.15f * gChan;
+                b = 0.85f * (b * scale) + 0.15f * bChan;
+            } else {
+                r = acesTonemap(r);
+                g = acesTonemap(g);
+                b = acesTonemap(b);
+            }
+        }
+
+        // 4. Smooth Perceptual Vibrance & Saturation
+        float maxC = Math.max(r, Math.max(g, b));
+        float minC = Math.min(r, Math.min(g, b));
+        float currentSat = (maxC > minC) ? ((maxC - minC) / (maxC + 0.05f)) : 0.0f;
+        float vibranceBoost = (1.0f - currentSat) * (vibrance - 1.0f);
+        float totalSat = saturation + vibranceBoost;
+
+        float gradedLum = 0.2126f * r + 0.7152f * g + 0.0722f * b;
+        r = gradedLum + (r - gradedLum) * totalSat;
+        g = gradedLum + (g - gradedLum) * totalSat;
+        b = gradedLum + (b - gradedLum) * totalSat;
+
+        // 5. Fast LUT Gamma Power Correction
+        if (gammaBoost > 0.01f && gammaBoost != 1.0f) {
+            r = fastGamma(r);
+            g = fastGamma(g);
+            b = fastGamma(b);
+        }
+
+        outRgb[0] = clamp01(r);
+        outRgb[1] = clamp01(g);
+        outRgb[2] = clamp01(b);
+    }
+
+    /**
+     * Fast in-place transformation of ARGB Texture Pack / Resource Pack pixel buffers.
+     * Preserves transparent (alpha 0) and translucent alpha channels with zero heap allocation.
+     */
+    public void processTexture(int[] pixels, int width, int height) {
+        if (!enabled || pixels == null || width <= 0 || height <= 0) return;
+        int total = Math.min(pixels.length, width * height);
+        float[] temp = TEMP_RGB.get();
+
+        for (int i = 0; i < total; i++) {
+            int argb = pixels[i];
+            int a = (argb >> 24) & 0xFF;
+            if (a == 0) continue; // Preserve fully transparent alpha 0
+
+            float r = ((argb >> 16) & 0xFF) / 255.0f;
+            float g = ((argb >> 8) & 0xFF) / 255.0f;
+            float b = (argb & 0xFF) / 255.0f;
+
+            gradeTextureRgb(r, g, b, temp);
+
+            int outR = Math.min(255, Math.max(0, (int) (temp[0] * 255.0f + 0.5f)));
+            int outG = Math.min(255, Math.max(0, (int) (temp[1] * 255.0f + 0.5f)));
+            int outB = Math.min(255, Math.max(0, (int) (temp[2] * 255.0f + 0.5f)));
+
+            pixels[i] = (a << 24) | (outR << 16) | (outG << 8) | outB;
+        }
+    }
+
+    /**
+     * Fast in-place transformation of NativeImage Little-Endian ABGR Texture Pack pixel buffers.
+     */
+    public void processTextureAbgr(int[] pixels, int width, int height) {
+        if (!enabled || pixels == null || width <= 0 || height <= 0) return;
+        int total = Math.min(pixels.length, width * height);
+        float[] temp = TEMP_RGB.get();
+
+        for (int i = 0; i < total; i++) {
+            int abgr = pixels[i];
+            int a = (abgr >> 24) & 0xFF;
+            if (a == 0) continue;
+
+            float b = ((abgr >> 16) & 0xFF) / 255.0f;
+            float g = ((abgr >> 8) & 0xFF) / 255.0f;
+            float r = (abgr & 0xFF) / 255.0f;
+
+            gradeTextureRgb(r, g, b, temp);
+
+            int outR = Math.min(255, Math.max(0, (int) (temp[0] * 255.0f + 0.5f)));
+            int outG = Math.min(255, Math.max(0, (int) (temp[1] * 255.0f + 0.5f)));
+            int outB = Math.min(255, Math.max(0, (int) (temp[2] * 255.0f + 0.5f)));
+
+            pixels[i] = (a << 24) | (outB << 16) | (outG << 8) | outR;
+        }
+    }
+
+    /**
+     * Grades a single ARGB integer color (e.g. Grass/Foliage/Water Colormaps from texture packs).
+     */
+    public int gradeColorRgbInt(int argb) {
+        if (!enabled) return argb;
+        int a = (argb >> 24) & 0xFF;
+        float r = ((argb >> 16) & 0xFF) / 255.0f;
+        float g = ((argb >> 8) & 0xFF) / 255.0f;
+        float b = (argb & 0xFF) / 255.0f;
+
+        float[] temp = TEMP_RGB.get();
+        gradeTextureRgb(r, g, b, temp);
+
+        int outR = Math.min(255, Math.max(0, (int) (temp[0] * 255.0f + 0.5f)));
+        int outG = Math.min(255, Math.max(0, (int) (temp[1] * 255.0f + 0.5f)));
+        int outB = Math.min(255, Math.max(0, (int) (temp[2] * 255.0f + 0.5f)));
+
+        return (a << 24) | (outR << 16) | (outG << 8) | outB;
+    }
+
+    /**
+     * Fast in-place transformation of NativeImage Little-Endian ABGR Lightmap.
+     */
+    public void processLightmapAbgr(int[] lightmapPixels, int width, int height, float nightFactor) {
+        if (!enabled || lightmapPixels == null) return;
+        float[] temp = TEMP_RGB.get();
+
+        for (int y = 0; y < height; y++) {
+            for (int x = 0; x < width; x++) {
+                int index = y * width + x;
+                int abgr = lightmapPixels[index];
+
+                int a = (abgr >> 24) & 0xFF;
+                if (a == 0) a = 0xFF;
+
+                float b = ((abgr >> 16) & 0xFF) / 255.0f;
+                float g = ((abgr >> 8) & 0xFF) / 255.0f;
+                float r = (abgr & 0xFF) / 255.0f;
+
+                gradeRgb(r, g, b, nightFactor, x, y, temp);
+
+                int outR = Math.min(255, Math.max(0, (int) (temp[0] * 255.0f + 0.5f)));
+                int outG = Math.min(255, Math.max(0, (int) (temp[1] * 255.0f + 0.5f)));
+                int outB = Math.min(255, Math.max(0, (int) (temp[2] * 255.0f + 0.5f)));
+
+                lightmapPixels[index] = (a << 24) | (outB << 16) | (outG << 8) | outR;
             }
         }
     }

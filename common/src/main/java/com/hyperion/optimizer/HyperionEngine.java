@@ -716,4 +716,34 @@ public final class HyperionEngine {
             chestBaker.clear();
         }
     }
+
+    /**
+     * Handles resource pack reload, texture reload (F3+T), or switching texture packs in video settings.
+     * Flushes animated sprite tracking, biome blend caches, lightmap dirty states, and resets chunk geometry.
+     */
+    public void onResourceReload() {
+        if (fastHdTextureEngine != null) {
+            fastHdTextureEngine.onResourceReload();
+        }
+        if (badOptimizationsEngine != null) {
+            badOptimizationsEngine.invalidateBiomeCaches();
+            badOptimizationsEngine.markLightmapDirty();
+        }
+        if (colorCorrectionEngine != null) {
+            colorCorrectionEngine.configure(config);
+        }
+        if (chestBaker != null) {
+            chestBaker.clear();
+        }
+        if (fancyGraphicsOptimizer != null) {
+            fancyGraphicsOptimizer.reset();
+        }
+        if (chunkLodManager != null) {
+            chunkLodManager.reset();
+        }
+        if (voxelSectionStorage != null) {
+            voxelSectionStorage.clear();
+        }
+        LOGGER.info("[Hyperion] Resource pack reload handled: Texture caches, lightmaps & sprite trackers safely invalidated.");
+    }
 }

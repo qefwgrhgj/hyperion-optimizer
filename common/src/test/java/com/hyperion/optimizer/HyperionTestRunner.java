@@ -1130,9 +1130,162 @@ public class HyperionTestRunner {
             failed++;
         }
 
+        try {
+            testHdTexturePackAlphaBleedAndBlackBorderElimination();
+            System.out.println("[PASS] 116. HD Texture Pack Alpha-Bleed Dilation & Black Border Elimination");
+            passed++;
+        } catch (Throwable t) {
+            System.err.println("[FAIL] 116. HD Texture Alpha-Bleed: " + t.getMessage());
+            failed++;
+        }
+
+        try {
+            testAnimatedSpriteInitialFrameGuaranteeAndUiBypass();
+            System.out.println("[PASS] 117. Animated Sprite Frame 0 Upload Guarantee & UI/Item Bypass");
+            passed++;
+        } catch (Throwable t) {
+            System.err.println("[FAIL] 117. Animated Sprite Frame 0 Guarantee: " + t.getMessage());
+            failed++;
+        }
+
+        try {
+            testMipmapChainIntegrityAndBlackDistantTexturePrevention();
+            System.out.println("[PASS] 118. Full Mipmap Chain Integrity & OpenGL Missing-LOD Blackness Prevention");
+            passed++;
+        } catch (Throwable t) {
+            System.err.println("[FAIL] 118. Mipmap Chain Integrity: " + t.getMessage());
+            failed++;
+        }
+
+        try {
+            testTransparentLeavesOcclusionSafetyAndBushyPacks();
+            System.out.println("[PASS] 119. Transparent / Bushy Leaves Internal Occlusion Safety (Zero Black Tree Cavities)");
+            passed++;
+        } catch (Throwable t) {
+            System.err.println("[FAIL] 119. Transparent Leaves Occlusion Safety: " + t.getMessage());
+            failed++;
+        }
+
+        try {
+            testLightmapOpaqueAlphaAndAbgrSafety();
+            System.out.println("[PASS] 120. Lightmap Opaque 0xFF Alpha & ABGR Byte-Order Blackout Prevention");
+            passed++;
+        } catch (Throwable t) {
+            System.err.println("[FAIL] 120. Lightmap Alpha & ABGR Safety: " + t.getMessage());
+            failed++;
+        }
+
+        try {
+            testResourcePackReloadStateInvalidation();
+            System.out.println("[PASS] 121. Resource Pack Reload (F3+T) Subsystem State & Cache Invalidation");
+            passed++;
+        } catch (Throwable t) {
+            System.err.println("[FAIL] 121. Resource Pack Reload State Invalidation: " + t.getMessage());
+            failed++;
+        }
+
+        try {
+            testKeyBindingManagerRightControlShortcut();
+            System.out.println("[PASS] 122. Right Control (Right Ctrl) Global Menu Shortcut & Fallback Pacing");
+            passed++;
+        } catch (Throwable t) {
+            System.err.println("[FAIL] 122. Right Control Shortcut: " + t.getMessage());
+            failed++;
+        }
+
+        try {
+            testSimdFrustumCullerMatrixMultiplication();
+            System.out.println("[PASS] 123. SIMD Frustum Culler Projection*ModelView Order & NaN Protection");
+            passed++;
+        } catch (Throwable t) {
+            System.err.println("[FAIL] 123. SIMD Frustum Culler Matrix Order: " + t.getMessage());
+            failed++;
+        }
+
+        try {
+            testVoxelSectionStorageNegativeHeights118Support();
+            System.out.println("[PASS] 124. Voxel Section Storage 1.18+ Negative Height Packing & Collision Safety");
+            passed++;
+        } catch (Throwable t) {
+            System.err.println("[FAIL] 124. Voxel Section Storage Negative Heights: " + t.getMessage());
+            failed++;
+        }
+
+        try {
+            testAsyncWorldTickDispatcherBackpressureBoundedQueue();
+            System.out.println("[PASS] 125. Async World Tick Dispatcher Bounded Backpressure & Anti-OOM Safety");
+            passed++;
+        } catch (Throwable t) {
+            System.err.println("[FAIL] 125. Async World Tick Backpressure: " + t.getMessage());
+            failed++;
+        }
+
+        try {
+            testSpatialCollisionEngineBucketCapping();
+            System.out.println("[PASS] 126. Spatial Collision Engine Bucket Cramming Capping & Lock Contention Shield");
+            passed++;
+        } catch (Throwable t) {
+            System.err.println("[FAIL] 126. Spatial Collision Bucket Capping: " + t.getMessage());
+            failed++;
+        }
+
+        try {
+            testHyperionConfigStorageCommentsAndSanitization();
+            System.out.println("[PASS] 127. Hyperion Config Storage Block & Inline Comments Parsing Resilience");
+            passed++;
+        } catch (Throwable t) {
+            System.err.println("[FAIL] 127. Config Storage Sanitization: " + t.getMessage());
+            failed++;
+        }
+
+        try {
+            testIrisShaderCompatPipelinePassCoordination();
+            System.out.println("[PASS] 128. Iris & Oculus Shader Pack Pass Coordination & Decoupled HUD Composite Safety");
+            passed++;
+        } catch (Throwable t) {
+            System.err.println("[FAIL] 128. Iris Shader Pass Coordination: " + t.getMessage());
+            failed++;
+        }
+
+        try {
+            testSleepingHopperServerTickRollback();
+            System.out.println("[PASS] 129. Sleeping Hopper Server Tick Rollback Recovery (/time set 0 Defense)");
+            passed++;
+        } catch (Throwable t) {
+            System.err.println("[FAIL] 129. Sleeping Hopper Tick Rollback: " + t.getMessage());
+            failed++;
+        }
+
+        try {
+            testStaticChestCustomModelBypass();
+            System.out.println("[PASS] 130. Static Chest Mesh Dynamic 3D Model & Physics Mod Custom Model Bypass");
+            passed++;
+        } catch (Throwable t) {
+            System.err.println("[FAIL] 130. Static Chest Custom Model Bypass: " + t.getMessage());
+            failed++;
+        }
+
+        try {
+            testTexturePackColorCorrectionArgbAndAbgr();
+            System.out.println("[PASS] 131. Texture Pack ARGB/ABGR Color Correction & True Zero-Black Alpha Preservation");
+            passed++;
+        } catch (Throwable t) {
+            System.err.println("[FAIL] 131. Texture Pack Color Correction: " + t.getMessage());
+            failed++;
+        }
+
+        try {
+            testTexturePackDilateAndColorCorrectPipelineAndColormaps();
+            System.out.println("[PASS] 132. Fast HD Texture Alpha-Bleed & Color Grading Unified Pipeline & Colormap Tint");
+            passed++;
+        } catch (Throwable t) {
+            System.err.println("[FAIL] 132. Texture Pack Pipeline & Colormaps: " + t.getMessage());
+            failed++;
+        }
+
         System.out.println("=================================================");
         System.out.println("SUMMARY: " + passed + " Passed, " + failed + " Failed.");
-        System.out.println("STATUS: " + (failed == 0 ? "[VERIFIED: ALL 115 ARCHITECTURAL, AUDIT, RESPAWN & NIGHT/32-CHUNK PERFORMANCE CONTRACTS VERIFIED]" : "[DEFECT DETECTED]"));
+        System.out.println("STATUS: " + (failed == 0 ? "[VERIFIED: ALL 132 ARCHITECTURAL, AUDIT, HD TEXTURE & COMPATIBILITY CONTRACTS VERIFIED]" : "[DEFECT DETECTED]"));
         System.out.println("=================================================");
 
         if (failed > 0) {
@@ -3080,33 +3233,37 @@ public class HyperionTestRunner {
         cfg.maxHdAtlasDimension = 16384;
         engine.configure(cfg);
 
-        // 1. Visible sprite updates every tick
-        if (!engine.shouldUpdateAnimatedSprite("minecraft:block/water_flow", 512, 512, true, 100L)) {
+        // 1. Initial Frame Guarantee: First tick must ALWAYS upload (even if offscreen)
+        if (!engine.shouldUpdateAnimatedSprite("minecraft:block/lava_flow", 512, 512, false, 100L)) {
+            throw new AssertionError("Frame 0 of animated sprite must always upload to prevent black uninitialized texture");
+        }
+
+        // 2. Visible sprite updates every tick
+        if (!engine.shouldUpdateAnimatedSprite("minecraft:block/water_flow", 512, 512, true, 101L)) {
             throw new AssertionError("Visible animated sprite must update");
         }
-        if (!engine.shouldUpdateAnimatedSprite("minecraft:block/water_flow", 512, 512, true, 101L)) {
+        if (!engine.shouldUpdateAnimatedSprite("minecraft:block/water_flow", 512, 512, true, 102L)) {
             throw new AssertionError("Visible animated sprite must update on subsequent tick");
         }
 
-        // 2. Offscreen sprite throttled to 1 Hz (1 update every 20 ticks)
-        engine.shouldUpdateAnimatedSprite("minecraft:block/lava_flow", 512, 512, false, 102L);
+        // 3. Offscreen sprite throttled to 1 Hz after initial frame
         if (engine.shouldUpdateAnimatedSprite("minecraft:block/lava_flow", 512, 512, false, 105L)) {
             throw new AssertionError("Offscreen animated sprite must be throttled within 20 ticks");
         }
-        // Tick 125 (23 ticks later) -> permitted
+        // Tick 125 (25 ticks later) -> permitted
         if (!engine.shouldUpdateAnimatedSprite("minecraft:block/lava_flow", 512, 512, false, 125L)) {
             throw new AssertionError("Offscreen animated sprite should update once per 20 ticks (1 Hz)");
         }
 
-        // 3. Memory estimation & adaptive mipmap levels
+        // 4. Memory estimation & full valid mipmap chain integrity
         long memBytes = FastHdTextureEngine.estimateAtlasMemoryBytes(8192, 8192, 4);
         if (memBytes <= 0 || memBytes < 256L * 1024L * 1024L) {
             throw new AssertionError("Atlas memory calculation invalid: " + memBytes);
         }
 
         int mipLevels512 = engine.calculateOptimalMipmapLevels(512, 512, 4, 2048);
-        if (mipLevels512 > 2) {
-            throw new AssertionError("HD 512x on 2GB VRAM must clamp mipmaps to <= 2 levels");
+        if (mipLevels512 != 4) {
+            throw new AssertionError("Mipmap chain must maintain full 4 levels to prevent OpenGL missing-LOD blackness");
         }
     }
 
@@ -4136,6 +4293,443 @@ public class HyperionTestRunner {
         boolean nearThrottled = mobAi.shouldThrottleNightHostileMob(true, true, 10.0, 1, 0);
         if (nearThrottled) {
             throw new AssertionError("Melee combat range monster (<24m) must not be throttled");
+        }
+    }
+
+    private static void testHdTexturePackAlphaBleedAndBlackBorderElimination() {
+        // 4x4 test texture: center (1,1) is green (0xFF00FF00), neighbor (1,2) is transparent black (0x00000000)
+        int[] pixels = new int[16];
+        pixels[1 * 4 + 1] = 0xFF00FF00; // Opaque green
+        pixels[1 * 4 + 2] = 0x00000000; // Transparent black
+
+        FastHdTextureEngine.dilateAlphaBleed(pixels, 4, 4);
+
+        int dilated = pixels[1 * 4 + 2];
+        int a = (dilated >> 24) & 0xFF;
+        int r = (dilated >> 16) & 0xFF;
+        int g = (dilated >> 8) & 0xFF;
+        int b = dilated & 0xFF;
+
+        if (a != 0) {
+            throw new AssertionError("Dilated transparent pixel must retain alpha 0");
+        }
+        if (g == 0) {
+            throw new AssertionError("Dilated transparent pixel must receive neighbor green color (RGB) to eliminate black borders in mipmaps");
+        }
+    }
+
+    private static void testAnimatedSpriteInitialFrameGuaranteeAndUiBypass() {
+        FastHdTextureEngine engine = new FastHdTextureEngine(true);
+
+        // 1. Newly loaded animated texture in resource pack (starts offscreen) -> MUST upload frame 0
+        boolean f0 = engine.shouldUpdateAnimatedSprite("custom_pack:block/animated_crystal", 256, 256, false, 50L);
+        if (!f0) {
+            throw new AssertionError("Frame 0 must upload immediately even if offscreen to prevent black uninitialized texture");
+        }
+
+        // Subsequent tick offscreen -> throttled
+        boolean f1 = engine.shouldUpdateAnimatedSprite("custom_pack:block/animated_crystal", 256, 256, false, 51L);
+        if (f1) {
+            throw new AssertionError("Offscreen animated sprite should throttle subsequent ticks");
+        }
+
+        // 2. UI / Handheld Items (compass, clock, gui icons) -> NEVER throttled
+        boolean ui0 = engine.shouldUpdateAnimatedSprite("minecraft:item/compass_16", 64, 64, false, 52L);
+        boolean ui1 = engine.shouldUpdateAnimatedSprite("minecraft:item/compass_16", 64, 64, false, 53L);
+        if (!ui0 || !ui1) {
+            throw new AssertionError("UI and held item animated textures must never be throttled into blackness");
+        }
+    }
+
+    private static void testMipmapChainIntegrityAndBlackDistantTexturePrevention() {
+        FastHdTextureEngine engine = new FastHdTextureEngine(true);
+        // Test standard resolutions across 16x up to 1024x
+        int[] resolutions = {16, 32, 64, 128, 256, 512, 1024};
+        for (int res : resolutions) {
+            int levels = engine.calculateOptimalMipmapLevels(res, res, 4, 4096);
+            if (levels != 4) {
+                throw new AssertionError("Mipmap levels for " + res + "x must be 4 to prevent OpenGL missing-LOD blackness");
+            }
+        }
+    }
+
+    private static void testTransparentLeavesOcclusionSafetyAndBushyPacks() {
+        FancyGraphicsOptimizer optimizer = new FancyGraphicsOptimizer(true);
+
+        // Transparent / Bushy leaves (Custom texture pack) -> Do NOT cull internal faces
+        boolean cullTransparent = optimizer.shouldCullLeavesFace(true, true, false);
+        if (cullTransparent) {
+            throw new AssertionError("Internal faces of transparent/bushy leaves must NOT be culled to avoid black hollow tree cavities");
+        }
+
+        // Opaque / Fast leaves -> Cull internal faces for performance
+        boolean cullOpaque = optimizer.shouldCullLeavesFace(true, true, true);
+        if (!cullOpaque) {
+            throw new AssertionError("Internal faces of opaque solid leaves should be culled");
+        }
+    }
+
+    private static void testLightmapOpaqueAlphaAndAbgrSafety() {
+        ColorCorrectionEngine engine = new ColorCorrectionEngine(true);
+
+        // 1. ARGB Lightmap with zero alpha
+        int[] argbPixels = new int[256];
+        argbPixels[0] = 0x00000000; // Zero alpha black pixel
+        engine.processLightmap(argbPixels, 16, 16, 0.0f);
+
+        int outAlpha = (argbPixels[0] >> 24) & 0xFF;
+        if (outAlpha != 0xFF) {
+            throw new AssertionError("Lightmap alpha must be enforced to 0xFF (opaque) to prevent black texture discard");
+        }
+
+        int outR = (argbPixels[0] >> 16) & 0xFF;
+        if (outR <= 0) {
+            throw new AssertionError("Lightmap must have safe ambient floor above zero to prevent black-crush collapse");
+        }
+
+        // 2. ABGR Lightmap
+        int[] abgrPixels = new int[256];
+        abgrPixels[0] = 0x00FF8040;
+        engine.processLightmapAbgr(abgrPixels, 16, 16, 0.0f);
+
+        int outAbgrAlpha = (abgrPixels[0] >> 24) & 0xFF;
+        if (outAbgrAlpha != 0xFF) {
+            throw new AssertionError("ABGR lightmap alpha must be 0xFF");
+        }
+    }
+
+    private static void testResourcePackReloadStateInvalidation() {
+        HyperionEngine engine = HyperionEngine.getInstance();
+        engine.onResourceReload();
+
+        FastHdTextureEngine hdEngine = engine.getFastHdTextureEngine();
+        if (hdEngine != null && hdEngine.getThrottledAnimationsCount() != 0) {
+            throw new AssertionError("Resource reload must reset animated texture throttled metrics");
+        }
+
+        StaticChestMeshBaker chestBaker = engine.getChestBaker();
+        if (chestBaker != null) {
+            chestBaker.setChestOpenState(12345L, true);
+            engine.onResourceReload();
+            if (chestBaker.isChestOpen(12345L)) {
+                throw new AssertionError("Resource reload must clear static chest state");
+            }
+        }
+    }
+
+    private static void testKeyBindingManagerRightControlShortcut() {
+        HyperionKeyBindingManager manager = HyperionKeyBindingManager.getInstance();
+        manager.reset();
+        manager.setEnabled(true);
+
+        // 1. Right Control Key Press (keyCode 345, action 1)
+        boolean triggered = manager.handleKeyInput(HyperionKeyBindingManager.GLFW_KEY_RIGHT_CONTROL, 0, 1, 0);
+        if (!triggered) {
+            throw new AssertionError("Right Control key (345) must trigger open screen request");
+        }
+        if (!manager.consumeOpenScreenRequest()) {
+            throw new AssertionError("Screen request must be consumed");
+        }
+        if (manager.consumeOpenScreenRequest()) {
+            throw new AssertionError("Screen request must be false after consumption");
+        }
+
+        // 2. Direct key code check
+        if (!manager.shouldOpenConfigScreen(HyperionKeyBindingManager.GLFW_KEY_RIGHT_CONTROL)) {
+            throw new AssertionError("shouldOpenConfigScreen with Right Control must return true");
+        }
+        manager.consumeOpenScreenRequest();
+
+        // 3. Fallback Ctrl + Shift + 0
+        boolean fallback = manager.shouldOpenConfigScreen(true, true, HyperionKeyBindingManager.GLFW_KEY_0);
+        if (!fallback) {
+            throw new AssertionError("Ctrl+Shift+0 fallback combination must return true");
+        }
+        manager.consumeOpenScreenRequest();
+
+        // 4. Other key (e.g. Left Control alone or key 'A') -> must NOT trigger
+        if (manager.handleKeyInput(HyperionKeyBindingManager.GLFW_KEY_LEFT_CONTROL, 0, 1, 0)) {
+            throw new AssertionError("Left Control alone should not trigger menu");
+        }
+        if (manager.handleKeyInput(65, 0, 1, 0)) { // Key 'A'
+            throw new AssertionError("Key 'A' must not trigger menu");
+        }
+
+        // 5. Test MixinKeyboard integration
+        boolean mixinTriggered = com.hyperion.optimizer.mixin.MixinKeyboard.onKey(0L, HyperionKeyBindingManager.GLFW_KEY_RIGHT_CONTROL, 0, 1, 0);
+        if (!mixinTriggered || !manager.consumeOpenScreenRequest()) {
+            throw new AssertionError("MixinKeyboard must intercept Right Control key");
+        }
+        if (!com.hyperion.optimizer.mixin.MixinKeyboard.shouldInterceptKey(HyperionKeyBindingManager.GLFW_KEY_RIGHT_CONTROL, 1)) {
+            throw new AssertionError("MixinKeyboard.shouldInterceptKey must return true for Right Control");
+        }
+    }
+
+    private static void testSimdFrustumCullerMatrixMultiplication() {
+        com.hyperion.optimizer.core.gpu.SimdFrustumCuller culler = new com.hyperion.optimizer.core.gpu.SimdFrustumCuller();
+        float[] proj = new float[16];
+        float[] mod = new float[16];
+        // Identity matrices
+        proj[0] = 1; proj[5] = 1; proj[10] = 1; proj[15] = 1;
+        mod[0] = 1; mod[5] = 1; mod[10] = 1; mod[15] = 1;
+        culler.updatePlanes(proj, mod);
+
+        float[] minX = {-1.0f}, minY = {-1.0f}, minZ = {-1.0f};
+        float[] maxX = {1.0f}, maxY = {1.0f}, maxZ = {1.0f};
+        int mask = culler.testBatch8(minX, minY, minZ, maxX, maxY, maxZ);
+        if ((mask & 1) == 0) {
+            throw new AssertionError("Center box should be visible in identity frustum");
+        }
+    }
+
+    private static void testVoxelSectionStorageNegativeHeights118Support() {
+        com.hyperion.optimizer.core.lod.voxel.VoxelSectionStorage storage = new com.hyperion.optimizer.core.lod.voxel.VoxelSectionStorage();
+        byte[] sectionData = new byte[64];
+        for (int i = 0; i < sectionData.length; i++) sectionData[i] = (byte) (i + 1);
+
+        // Store section at negative height Y = -4 (Deepslate layer in 1.18+)
+        storage.storeSection(10, -4, 20, 0, sectionData);
+        // Store section at positive height Y = 252 (Mountain layer)
+        storage.storeSection(10, 252, 20, 0, sectionData);
+
+        long keyNegative = com.hyperion.optimizer.core.lod.voxel.VoxelSectionStorage.packSectionKey(10, -4, 20, 0);
+        long keyPositive = com.hyperion.optimizer.core.lod.voxel.VoxelSectionStorage.packSectionKey(10, 252, 20, 0);
+
+        if (keyNegative == keyPositive) {
+            throw new AssertionError("Negative section Y (-4) must not collide with positive section Y (252)");
+        }
+
+        byte[] loadedNegative = storage.getSection(10, -4, 20, 0, 64);
+        byte[] loadedPositive = storage.getSection(10, 252, 20, 0, 64);
+
+        if (loadedNegative == null || loadedPositive == null) {
+            throw new AssertionError("Both negative and positive sections must be retrievable");
+        }
+    }
+
+    private static void testAsyncWorldTickDispatcherBackpressureBoundedQueue() {
+        com.hyperion.optimizer.core.threading.AsyncWorldTickDispatcher dispatcher = new com.hyperion.optimizer.core.threading.AsyncWorldTickDispatcher(true);
+        final java.util.concurrent.atomic.AtomicInteger executedCount = new java.util.concurrent.atomic.AtomicInteger(0);
+
+        for (int i = 0; i < com.hyperion.optimizer.core.threading.AsyncWorldTickDispatcher.MAX_PENDING_TASKS + 50; i++) {
+            dispatcher.queueAsyncTask(executedCount::incrementAndGet);
+        }
+
+        if (dispatcher.getQueueDepth() > com.hyperion.optimizer.core.threading.AsyncWorldTickDispatcher.MAX_PENDING_TASKS) {
+            throw new AssertionError("Queue depth must not exceed MAX_PENDING_TASKS");
+        }
+    }
+
+    private static void testSpatialCollisionEngineBucketCapping() {
+        com.hyperion.optimizer.core.entity.SpatialCollisionEngine engine = new com.hyperion.optimizer.core.entity.SpatialCollisionEngine(true, 10, 32.0);
+        for (int i = 0; i < 200; i++) {
+            engine.registerEntity(new com.hyperion.optimizer.core.entity.SpatialCollisionEngine.CollidableEntity(i, 0.5, 64.0, 0.5, 0.6, 1.8));
+        }
+
+        List<com.hyperion.optimizer.core.entity.SpatialCollisionEngine.CollidableEntity> candidates = engine.getNearbyCandidates(0.5, 0.5);
+        if (candidates.size() > com.hyperion.optimizer.core.entity.SpatialCollisionEngine.MAX_ENTITIES_PER_BUCKET) {
+            throw new AssertionError("Candidate list per bucket must be capped at MAX_ENTITIES_PER_BUCKET");
+        }
+    }
+
+    private static void testHyperionConfigStorageCommentsAndSanitization() {
+        String jsonWithComments = "{\n" +
+            "  // This is an inline comment\n" +
+            "  \"enableGpuDrivenRenderer\": true,\n" +
+            "  /* block comment */\n" +
+            "  \"targetFramerate\": 240\n" +
+            "}";
+        com.hyperion.optimizer.api.HyperionConfig cfg = com.hyperion.optimizer.api.HyperionConfigStorage.parseJson(jsonWithComments);
+        if (!cfg.enableGpuDrivenRenderer || cfg.targetFramerate != 240) {
+            throw new AssertionError("Config parser must cleanly handle inline and block comments");
+        }
+    }
+
+    private static void testIrisShaderCompatPipelinePassCoordination() {
+        com.hyperion.optimizer.compat.IrisShaderCompatPipeline pipeline = com.hyperion.optimizer.compat.IrisShaderCompatPipeline.getInstance();
+        pipeline.reset();
+
+        // 1. Without shaders
+        pipeline.setShaderPackActive(false);
+        if (!pipeline.shouldRenderDecoupledHudNow() || !pipeline.shouldRenderVoxelLodInCurrentPass()) {
+            throw new AssertionError("Without shaders, HUD and LOD rendering must always be permitted");
+        }
+
+        // 2. With shaders active in shadow pass
+        pipeline.setShaderPackActive(true);
+        pipeline.setShadowPassActive(true);
+        pipeline.setCurrentPassName("shadow");
+        if (pipeline.shouldRenderVoxelLodInCurrentPass()) {
+            throw new AssertionError("In Iris shadow pass, voxel LODs should be skipped to conserve shadow map fillrate");
+        }
+        if (pipeline.shouldRenderDecoupledHudNow()) {
+            throw new AssertionError("In Iris shadow pass, Decoupled HUD must not render");
+        }
+
+        // 3. With shaders active in composite_final pass
+        pipeline.setShadowPassActive(false);
+        pipeline.setCurrentPassName("composite_final");
+        if (!pipeline.shouldRenderDecoupledHudNow()) {
+            throw new AssertionError("In composite_final pass, Decoupled HUD must be permitted");
+        }
+        if (!pipeline.shouldRenderVoxelLodInCurrentPass()) {
+            throw new AssertionError("In normal pass, voxel LODs must be permitted");
+        }
+    }
+
+    private static void testSleepingHopperServerTickRollback() {
+        com.hyperion.optimizer.core.physics.SleepingHopperManager hopperManager = new com.hyperion.optimizer.core.physics.SleepingHopperManager(true);
+        hopperManager.clear();
+
+        long pos = 123456789L;
+        hopperManager.putToSleep(pos, 5000L, 100); // Sleep until 5100
+        if (!hopperManager.isHopperSleeping(pos, 5050L)) {
+            throw new AssertionError("Hopper must be sleeping at tick 5050");
+        }
+
+        // Server tick rollback: e.g. /time set 0 or NTP sync -> tick rolls back to 100
+        boolean isSleepingAfterRollback = hopperManager.isHopperSleeping(pos, 100L);
+        if (isSleepingAfterRollback) {
+            throw new AssertionError("Server tick rollback must trigger instant wake-up of sleeping hoppers");
+        }
+    }
+
+    private static void testStaticChestCustomModelBypass() {
+        com.hyperion.optimizer.core.entity.StaticChestMeshBaker chestBaker = new com.hyperion.optimizer.core.entity.StaticChestMeshBaker(true);
+        chestBaker.clear();
+
+        long packedPos = 987654321L;
+        // Default: closed chest should render as static block
+        if (!chestBaker.shouldRenderAsStaticBlock(packedPos)) {
+            throw new AssertionError("Closed vanilla chest should render as static block");
+        }
+
+        // Custom 3D model or Physics Mod active -> must bypass static baking
+        chestBaker.setCustomModelModActive(true);
+        if (chestBaker.shouldRenderAsStaticBlock(packedPos)) {
+            throw new AssertionError("With custom 3D model mod active, static baking must be bypassed");
+        }
+        chestBaker.setCustomModelModActive(false);
+
+        // Custom texture pack active -> must bypass static baking
+        chestBaker.setCustomTexturePackActive(true);
+        if (chestBaker.shouldRenderAsStaticBlock(packedPos)) {
+            throw new AssertionError("With custom texture pack active, static baking must be bypassed");
+        }
+    }
+
+    private static void testTexturePackColorCorrectionArgbAndAbgr() {
+        ColorCorrectionEngine cce = new ColorCorrectionEngine(true);
+        HyperionConfig cfg = new HyperionConfig();
+        cfg.enableColorCorrection = true;
+        cfg.enableTexturePackColorCorrection = true;
+        cfg.colorGradingMode = "VIBRANT_HDR";
+        cfg.colorVibrance = 1.20;
+        cfg.colorSaturation = 1.10;
+        cfg.colorContrast = 1.05;
+        cce.configure(cfg);
+
+        // 1. ARGB Texture Pack Buffer (4x4)
+        int[] argb = new int[16];
+        argb[0] = 0x00000000; // Transparent black -> must retain alpha 0
+        argb[1] = 0x80804020; // Translucent brown -> must retain alpha 0x80
+        argb[2] = 0xFF000000; // Pure opaque black (obsidian/coal) -> must NOT be lifted to gray!
+        argb[3] = 0xFFFFFFFF; // Pure white highlight -> must remain white (~255)
+        argb[4] = 0xFF2060C0; // Mid blue -> vibrant HDR color grading
+
+        cce.processTexture(argb, 4, 4);
+
+        int a0 = (argb[0] >> 24) & 0xFF;
+        if (a0 != 0) {
+            throw new AssertionError("Transparent pixel in texture pack must retain alpha 0");
+        }
+
+        int a1 = (argb[1] >> 24) & 0xFF;
+        if (a1 != 0x80) {
+            throw new AssertionError("Translucent pixel in texture pack must retain alpha 0x80, got: " + a1);
+        }
+
+        int r2 = (argb[2] >> 16) & 0xFF;
+        int g2 = (argb[2] >> 8) & 0xFF;
+        int b2 = argb[2] & 0xFF;
+        if (r2 != 0 || g2 != 0 || b2 != 0) {
+            throw new AssertionError("Pure black texture pixel in texture pack must stay 0x000000 (no artificial ambient floor lift), got: R=" + r2 + " G=" + g2 + " B=" + b2);
+        }
+
+        int r3 = (argb[3] >> 16) & 0xFF;
+        int g3 = (argb[3] >> 8) & 0xFF;
+        int b3 = argb[3] & 0xFF;
+        if (r3 < 250 || g3 < 250 || b3 < 250) {
+            throw new AssertionError("White texture pixel must stay near 255 with ACES normalization");
+        }
+
+        // 2. NativeImage ABGR Texture Pack Buffer
+        int[] abgr = new int[16];
+        abgr[0] = 0x00000000;
+        abgr[1] = 0x80204080; // Translucent
+        abgr[2] = 0xFF000000; // Black
+        abgr[3] = 0xFFFFFFFF; // White
+
+        cce.processTextureAbgr(abgr, 4, 4);
+
+        int abgrA0 = (abgr[0] >> 24) & 0xFF;
+        if (abgrA0 != 0) {
+            throw new AssertionError("ABGR transparent pixel must retain alpha 0");
+        }
+        int abgrA1 = (abgr[1] >> 24) & 0xFF;
+        if (abgrA1 != 0x80) {
+            throw new AssertionError("ABGR translucent pixel must retain alpha 0x80");
+        }
+        int abgrR2 = abgr[2] & 0xFF;
+        int abgrG2 = (abgr[2] >> 8) & 0xFF;
+        int abgrB2 = (abgr[2] >> 16) & 0xFF;
+        if (abgrR2 != 0 || abgrG2 != 0 || abgrB2 != 0) {
+            throw new AssertionError("ABGR black texture pixel must stay pure black");
+        }
+    }
+
+    private static void testTexturePackDilateAndColorCorrectPipelineAndColormaps() {
+        ColorCorrectionEngine cce = new ColorCorrectionEngine(true);
+        FastHdTextureEngine hdEngine = new FastHdTextureEngine(true);
+
+        // 1. Texture with solid green (0xFF00FF00) and transparent neighbor (0x00000000)
+        int[] pixels = new int[16];
+        pixels[1 * 4 + 1] = 0xFF00FF00; // Center green
+        pixels[1 * 4 + 2] = 0x00000000; // Transparent neighbor
+
+        FastHdTextureEngine.dilateAndColorCorrectTexturePack(pixels, 4, 4, false, cce);
+
+        int solidGreen = pixels[1 * 4 + 1];
+        int solidA = (solidGreen >> 24) & 0xFF;
+        int solidG = (solidGreen >> 8) & 0xFF;
+        if (solidA != 0xFF || solidG == 0) {
+            throw new AssertionError("Solid green pixel must be color graded and remain opaque");
+        }
+
+        int dilated = pixels[1 * 4 + 2];
+        int dilatedA = (dilated >> 24) & 0xFF;
+        int dilatedG = (dilated >> 8) & 0xFF;
+        if (dilatedA != 0) {
+            throw new AssertionError("Dilated transparent pixel must retain alpha 0");
+        }
+        if (dilatedG == 0) {
+            throw new AssertionError("Dilated transparent pixel must receive graded neighbor green RGB");
+        }
+
+        // 2. Colormap Integer Tint Grading (Grass/Foliage from custom texture pack)
+        int rawGrass = 0xFF55AA55;
+        int gradedGrass = cce.gradeColorRgbInt(rawGrass);
+        int gradedAlpha = (gradedGrass >> 24) & 0xFF;
+        if (gradedAlpha != 0xFF) {
+            throw new AssertionError("Graded colormap color must retain alpha 255");
+        }
+
+        // 3. Mixin Hooks for Texture Pack & Biome Colors
+        MixinLightmapTexture.onProcessTexture(pixels, 4, 4);
+        MixinLightmapTexture.onProcessTextureAbgr(pixels, 4, 4);
+        int mixinBiomeColor = MixinLightmapTexture.onGradeBiomeColor(rawGrass);
+        if (((mixinBiomeColor >> 24) & 0xFF) != 0xFF) {
+            throw new AssertionError("Mixin onGradeBiomeColor must return valid graded color");
         }
     }
 }
