@@ -1283,9 +1283,27 @@ public class HyperionTestRunner {
             failed++;
         }
 
+        try {
+            testHyperionEngineSubsystemNonNullableGuaranteeAndAutoInit();
+            System.out.println("[PASS] 133. HyperionEngine Subsystems Auto-Init & Non-Nullable Guarantee Across All 45 Cores");
+            passed++;
+        } catch (Throwable t) {
+            System.err.println("[FAIL] 133. Subsystems Auto-Init Guarantee: " + t.getMessage());
+            failed++;
+        }
+
+        try {
+            testGuiLauncherKeybindingAndVideoOptionsHook();
+            System.out.println("[PASS] 134. Hyperion GUI Launcher, Video Options Screen Hook & Right Control Key Trigger");
+            passed++;
+        } catch (Throwable t) {
+            System.err.println("[FAIL] 134. GUI Launcher & Key Trigger: " + t.getMessage());
+            failed++;
+        }
+
         System.out.println("=================================================");
         System.out.println("SUMMARY: " + passed + " Passed, " + failed + " Failed.");
-        System.out.println("STATUS: " + (failed == 0 ? "[VERIFIED: ALL 132 ARCHITECTURAL, AUDIT, HD TEXTURE & COMPATIBILITY CONTRACTS VERIFIED]" : "[DEFECT DETECTED]"));
+        System.out.println("STATUS: " + (failed == 0 ? "[VERIFIED: ALL 134 ARCHITECTURAL, AUDIT, HD TEXTURE & COMPATIBILITY CONTRACTS VERIFIED]" : "[DEFECT DETECTED]"));
         System.out.println("=================================================");
 
         if (failed > 0) {
@@ -4730,6 +4748,90 @@ public class HyperionTestRunner {
         int mixinBiomeColor = MixinLightmapTexture.onGradeBiomeColor(rawGrass);
         if (((mixinBiomeColor >> 24) & 0xFF) != 0xFF) {
             throw new AssertionError("Mixin onGradeBiomeColor must return valid graded color");
+        }
+    }
+
+    private static void testHyperionEngineSubsystemNonNullableGuaranteeAndAutoInit() {
+        HyperionEngine engine = HyperionEngine.getInstance();
+        if (!engine.isInitialized()) {
+            throw new AssertionError("HyperionEngine must auto-initialize upon first getInstance() call");
+        }
+
+        // Verify non-nullability across all core subsystems
+        if (engine.getComputeCullEngine() == null) throw new AssertionError("ComputeCullEngine must not be null");
+        if (engine.getMultiDrawManager() == null) throw new AssertionError("MultiDrawManager must not be null");
+        if (engine.getHudManager() == null) throw new AssertionError("DecoupledHudManager must not be null");
+        if (engine.getEntityCuller() == null) throw new AssertionError("EntityDepthCuller must not be null");
+        if (engine.getChestBaker() == null) throw new AssertionError("StaticChestMeshBaker must not be null");
+        if (engine.getXpMerger() == null) throw new AssertionError("ExperienceOrbMerger must not be null");
+        if (engine.getAnimationLod() == null) throw new AssertionError("AnimationLodManager must not be null");
+        if (engine.getVoxelCache() == null) throw new AssertionError("VoxelShapeFastCache must not be null");
+        if (engine.getHopperManager() == null) throw new AssertionError("SleepingHopperManager must not be null");
+        if (engine.getPathCircuitBreaker() == null) throw new AssertionError("PathfindingCircuitBreaker must not be null");
+        if (engine.getLightEngine() == null) throw new AssertionError("AsyncBitsetLightEngine must not be null");
+        if (engine.getColorCorrectionEngine() == null) throw new AssertionError("ColorCorrectionEngine must not be null");
+        if (engine.getFpsStabilizer() == null) throw new AssertionError("FpsStabilizerEngine must not be null");
+        if (engine.getNetworkConsolidator() == null) throw new AssertionError("PacketFlushConsolidator must not be null");
+        if (engine.getWorldCacheStorage() == null) throw new AssertionError("ClientWorldCacheStorage must not be null");
+        if (engine.getFakeChunkManager() == null) throw new AssertionError("FakeChunkManager must not be null");
+        if (engine.getAudioEngine() == null) throw new AssertionError("AsyncAudioEngine must not be null");
+        if (engine.getExplosionEngine() == null) throw new AssertionError("FastExplosionEngine must not be null");
+        if (engine.getRedstoneEngine() == null) throw new AssertionError("FastRedstoneEngine must not be null");
+        if (engine.getCollisionEngine() == null) throw new AssertionError("SpatialCollisionEngine must not be null");
+        if (engine.getFluidEngine() == null) throw new AssertionError("FastFluidEngine must not be null");
+        if (engine.getParticleEngine() == null) throw new AssertionError("FastParticleEngine must not be null");
+        if (engine.getRegistryCache() == null) throw new AssertionError("FastRegistryCache must not be null");
+        if (engine.getAmdAccelerator() == null) throw new AssertionError("AmdGpuAccelerator must not be null");
+        if (engine.getDualGpuManager() == null) throw new AssertionError("DualGpuManager must not be null");
+        if (engine.getFastHdTextureEngine() == null) throw new AssertionError("FastHdTextureEngine must not be null");
+        if (engine.getFancyGraphicsOptimizer() == null) throw new AssertionError("FancyGraphicsOptimizer must not be null");
+        if (engine.getFastCloudEngine() == null) throw new AssertionError("FastCloudEngine must not be null");
+        if (engine.getGpuThermalGuard() == null) throw new AssertionError("GpuThermalPowerGuard must not be null");
+        if (engine.getChunkLodManager() == null) throw new AssertionError("ChunkLodManager must not be null");
+        if (engine.getAggressiveFaceCuller() == null) throw new AssertionError("AggressiveFaceCuller must not be null");
+        if (engine.getGpuInstancingEngine() == null) throw new AssertionError("GpuInstancingEngine must not be null");
+        if (engine.getGpuCrashGuard() == null) throw new AssertionError("GpuResetCrashGuard must not be null");
+        if (engine.getKeyBindingManager() == null) throw new AssertionError("HyperionKeyBindingManager must not be null");
+        if (engine.getVoxelMipTree() == null) throw new AssertionError("VoxelHierarchicalMipTree must not be null");
+        if (engine.getVoxelSectionStorage() == null) throw new AssertionError("VoxelSectionStorage must not be null");
+        if (engine.getVoxelLodRenderer() == null) throw new AssertionError("VoxelLodRenderer must not be null");
+        if (engine.getVoxelHorizonBlender() == null) throw new AssertionError("VoxelHorizonBlender must not be null");
+        if (engine.getVoxelIngestEngine() == null) throw new AssertionError("VoxelPregenIngestEngine must not be null");
+        if (engine.getModCompatManager() == null) throw new AssertionError("HyperionModCompatManager must not be null");
+        if (engine.getIrisShaderPipeline() == null) throw new AssertionError("IrisShaderCompatPipeline must not be null");
+        if (engine.getAdvancedParticleEngine() == null) throw new AssertionError("AdvancedParticleEngine must not be null");
+        if (engine.getBadOptimizationsEngine() == null) throw new AssertionError("BadOptimizationsEngine must not be null");
+        if (engine.getMobAiOptimizer() == null) throw new AssertionError("MobAiOptimizer must not be null");
+        if (engine.getPalladiumCache() == null) throw new AssertionError("PalladiumCapabilityCache must not be null");
+        if (engine.getThreadPoolManager() == null) throw new AssertionError("HyperionThreadPoolManager must not be null");
+        if (engine.getParallelChunkMesher() == null) throw new AssertionError("ParallelChunkMesher must not be null");
+        if (engine.getMultiCoreEntityPhysics() == null) throw new AssertionError("MultiCoreEntityPhysicsEngine must not be null");
+        if (engine.getAsyncWorldTickDispatcher() == null) throw new AssertionError("AsyncWorldTickDispatcher must not be null");
+        if (engine.getCpuAffinityGovernor() == null) throw new AssertionError("CpuCoreAffinityGovernor must not be null");
+    }
+
+    private static void testGuiLauncherKeybindingAndVideoOptionsHook() {
+        HyperionKeyBindingManager keyManager = HyperionKeyBindingManager.getInstance();
+        keyManager.reset();
+        keyManager.setEnabled(true);
+
+        // 1. Right Control Trigger (Key 345)
+        boolean handled = keyManager.handleKeyInput(HyperionKeyBindingManager.GLFW_KEY_RIGHT_CONTROL, 0, 1, 0);
+        if (!handled) {
+            throw new AssertionError("Right Control key press must be handled by keybinding manager");
+        }
+        if (!keyManager.consumeOpenScreenRequest()) {
+            throw new AssertionError("Screen request must be queued for consumption");
+        }
+
+        // 2. Video Options Screen Injected Button Action
+        MixinVideoOptionsScreen.openHyperionSettings();
+
+        // 3. Screen Model Verification
+        HyperionScreenModel model = new HyperionScreenModel();
+        model.setActiveCategory(HyperionCategory.GRAPHICS_SETTINGS);
+        if (model.getCurrentOptions().isEmpty()) {
+            throw new AssertionError("Graphics settings options list must not be empty");
         }
     }
 }

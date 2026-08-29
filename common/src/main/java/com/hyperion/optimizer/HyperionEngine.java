@@ -104,11 +104,21 @@ public final class HyperionEngine {
     private HyperionEngine() {}
 
     public static HyperionEngine getInstance() {
+        if (!INSTANCE.initialized) {
+            synchronized (INSTANCE) {
+                if (!INSTANCE.initialized) {
+                    INSTANCE.initialize(com.hyperion.optimizer.api.HyperionConfigStorage.loadOrCreate());
+                }
+            }
+        }
         return INSTANCE;
     }
 
     public synchronized void initialize(HyperionConfig customConfig) {
         if (this.initialized) {
+            if (customConfig != null) {
+                reloadConfig(customConfig);
+            }
             return;
         }
         if (customConfig != null) {

@@ -25,6 +25,6 @@ public class MixinVideoOptionsScreen {
     }
 
     public static void openHyperionSettings() {
-        System.out.println("[Hyperion] Opening Hyperion Options Screen: " + HyperionEngine.getInstance().getConfig());
+        com.hyperion.optimizer.gui.HyperionGuiLauncher.openConfigScreen();
     }
 }

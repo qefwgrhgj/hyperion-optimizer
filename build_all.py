@@ -166,7 +166,7 @@ def run_tests():
     common_dest = CLASSES_DIR / "common"
     
     run_cmd(f'javac -cp "{common_dest.as_posix()}" -d "{test_dest.as_posix()}" "{test_src.as_posix()}"')
-    out = run_cmd(f'java -cp "{test_dest.as_posix()};{common_dest.as_posix()}" com.hyperion.optimizer.HyperionTestRunner')
+    out = run_cmd(f'java -Djava.awt.headless=true -cp "{test_dest.as_posix()};{common_dest.as_posix()}" com.hyperion.optimizer.HyperionTestRunner')
     lines = [l for l in out.strip().split("\n") if "SUMMARY" in l or "STATUS" in l or "[PASS]" in l]
     print("\n".join(lines[-10:]))
 

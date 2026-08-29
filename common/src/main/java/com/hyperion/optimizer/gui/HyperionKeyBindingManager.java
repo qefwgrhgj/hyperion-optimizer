@@ -44,6 +44,8 @@ public final class HyperionKeyBindingManager {
             try {
                 screenOpener.run();
             } catch (Throwable ignored) {}
+        } else {
+            HyperionGuiLauncher.openConfigScreen();
         }
     }
 
