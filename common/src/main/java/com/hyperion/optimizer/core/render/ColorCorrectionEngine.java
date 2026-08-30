@@ -338,11 +338,14 @@ public final class ColorCorrectionEngine {
     }
 
     /**
-     * Grades a single ARGB integer color (e.g. Grass/Foliage/Water Colormaps from texture packs).
+     * Grades a single ARGB or 24-bit RGB integer color (e.g. Grass/Foliage/Water Colormaps from texture packs).
+     * Correctly handles 24-bit Minecraft BiomeColors without corrupting vertex alpha.
      */
     public int gradeColorRgbInt(int argb) {
         if (!enabled || !texturePackGradingEnabled) return argb;
         int a = (argb >> 24) & 0xFF;
+        boolean hadExplicitAlpha = (a != 0);
+
         float r = ((argb >> 16) & 0xFF) / 255.0f;
         float g = ((argb >> 8) & 0xFF) / 255.0f;
         float b = (argb & 0xFF) / 255.0f;
@@ -353,6 +356,10 @@ public final class ColorCorrectionEngine {
         int outR = Math.min(255, Math.max(0, (int) (temp[0] * 255.0f + 0.5f)));
         int outG = Math.min(255, Math.max(0, (int) (temp[1] * 255.0f + 0.5f)));
         int outB = Math.min(255, Math.max(0, (int) (temp[2] * 255.0f + 0.5f)));
+
+        if (!hadExplicitAlpha) {
+            return (outR << 16) | (outG << 8) | outB; // Retain 24-bit RGB format for vanilla Minecraft BiomeColors
+        }
 
         return (a << 24) | (outR << 16) | (outG << 8) | outB;
     }

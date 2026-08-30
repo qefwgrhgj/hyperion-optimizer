@@ -4735,17 +4735,24 @@ public class HyperionTestRunner {
         }
 
         // 2. Colormap Integer Tint Grading (Grass/Foliage from custom texture pack)
-        int rawGrass = 0xFF55AA55;
-        int gradedGrass = cce.gradeColorRgbInt(rawGrass);
-        int gradedAlpha = (gradedGrass >> 24) & 0xFF;
+        int rawGrass32 = 0xFF55AA55;
+        int gradedGrass32 = cce.gradeColorRgbInt(rawGrass32);
+        int gradedAlpha = (gradedGrass32 >> 24) & 0xFF;
         if (gradedAlpha != 0xFF) {
-            throw new AssertionError("Graded colormap color must retain alpha 255");
+            throw new AssertionError("Graded 32-bit colormap color must retain alpha 255");
+        }
+
+        int rawGrass24 = 0x0055AA55;
+        int gradedGrass24 = cce.gradeColorRgbInt(rawGrass24);
+        int gradedAlpha24 = (gradedGrass24 >> 24) & 0xFF;
+        if (gradedAlpha24 != 0) {
+            throw new AssertionError("Graded 24-bit Minecraft BiomeColors must retain 24-bit RGB format");
         }
 
         // 3. Mixin Hooks for Texture Pack & Biome Colors
         MixinLightmapTexture.onProcessTexture(pixels, 4, 4);
         MixinLightmapTexture.onProcessTextureAbgr(pixels, 4, 4);
-        int mixinBiomeColor = MixinLightmapTexture.onGradeBiomeColor(rawGrass);
+        int mixinBiomeColor = MixinLightmapTexture.onGradeBiomeColor(rawGrass32);
         if (((mixinBiomeColor >> 24) & 0xFF) != 0xFF) {
             throw new AssertionError("Mixin onGradeBiomeColor must return valid graded color");
         }
