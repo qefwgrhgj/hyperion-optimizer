@@ -203,21 +203,21 @@ public final class FastHdTextureEngine {
     /**
      * Unified Alpha-Bleed Dilation & Color Correction pipeline for HD Texture Packs.
      * Guarantees smooth edge blending, rich HDR vibrance, and zero black borders or alpha distortion.
+     * When texture pack grading is disabled (default), raw pixel buffers remain 100% untouched.
      */
     public static void dilateAndColorCorrectTexturePack(int[] pixels, int width, int height, boolean isAbgr, com.hyperion.optimizer.core.render.ColorCorrectionEngine colorEngine) {
         if (pixels == null || width <= 0 || height <= 0) return;
 
-        // 1. Apply subtle Color Enhancement if explicitly enabled in configuration
-        if (colorEngine != null && colorEngine.isEnabled()) {
+        // 1. Only process texture buffers if explicitly enabled in configuration
+        if (colorEngine != null && colorEngine.isEnabled() && colorEngine.isTexturePackGradingEnabled()) {
             if (isAbgr) {
                 colorEngine.processTextureAbgr(pixels, width, height);
             } else {
                 colorEngine.processTexture(pixels, width, height);
             }
+            // 2. Propagate edge colors into adjacent transparent pixels
+            dilateAlphaBleed(pixels, width, height, isAbgr);
         }
-
-        // 2. Propagate edge colors into adjacent transparent pixels to prevent dark mipmap outlines
-        dilateAlphaBleed(pixels, width, height, isAbgr);
     }
 
     /**

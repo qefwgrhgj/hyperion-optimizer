@@ -11,7 +11,7 @@ public class MixinLightmapTexture {
     public static void onProcessLightmap(int[] pixels, int width, int height, float nightFactor) {
         ColorCorrectionEngine engine = HyperionEngine.getInstance().getColorCorrectionEngine();
         if (engine != null && engine.isEnabled()) {
-            engine.processLightmap(pixels, width, height, nightFactor);
+            engine.processLightmapAbgr(pixels, width, height, nightFactor);
         }
     }
 

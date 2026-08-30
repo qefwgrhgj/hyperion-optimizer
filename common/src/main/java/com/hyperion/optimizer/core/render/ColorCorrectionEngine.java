@@ -430,6 +430,7 @@ public final class ColorCorrectionEngine {
     public float getNightAmbientBoost() { return nightAmbientBoost; }
     public int getColorTemperature() { return colorTemperature; }
     public boolean isDebandingEnabled() { return debanding; }
+    public boolean isTexturePackGradingEnabled() { return texturePackGradingEnabled; }
 
     public void setEnabled(boolean enabled) { this.enabled = enabled; }
     public void setMode(Mode mode) { if (mode != null) this.mode = mode; }
@@ -441,4 +442,5 @@ public final class ColorCorrectionEngine {
     public void setNightAmbientBoost(float v) { this.nightAmbientBoost = v; }
     public void setColorTemperature(int temp) { this.colorTemperature = temp; recomputeColorTemperature(); }
     public void setDebanding(boolean debanding) { this.debanding = debanding; }
+    public void setTexturePackGradingEnabled(boolean v) { this.texturePackGradingEnabled = v; }
 }

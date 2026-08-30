@@ -4708,6 +4708,7 @@ public class HyperionTestRunner {
 
     private static void testTexturePackDilateAndColorCorrectPipelineAndColormaps() {
         ColorCorrectionEngine cce = new ColorCorrectionEngine(true);
+        cce.setTexturePackGradingEnabled(true);
         FastHdTextureEngine hdEngine = new FastHdTextureEngine(true);
 
         // 1. Texture with solid green (0xFF00FF00) and transparent neighbor (0x00000000)
