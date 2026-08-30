@@ -67,14 +67,12 @@ public final class FpsStabilizerEngine {
 
     /**
      * Calculates dynamic chunk upload budget based on real-time sub-frame margin (OptiFine Chunk Updates).
-     * If frame time is well within budget, allows up to 2x uploads; if struggling, clamps strictly to 1 upload.
+     * If frame time is struggling beyond target budget, throttles down to 1 upload to protect frame pacing.
      */
     public int getDynamicChunkUploadLimit() {
         if (!dynamicWorkBudgeting) return maxChunkUploadsPerFrame;
         long targetBudget = 1_000_000_000L / Math.max(1, targetFps);
-        if (currentFrameTimeNano < (targetBudget / 2)) {
-            return Math.min(8, maxChunkUploadsPerFrame * 2);
-        } else if (currentFrameTimeNano > targetBudget) {
+        if (currentFrameTimeNano > targetBudget) {
             return 1;
         }
         return maxChunkUploadsPerFrame;

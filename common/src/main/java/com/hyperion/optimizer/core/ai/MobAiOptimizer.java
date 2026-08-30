@@ -101,7 +101,9 @@ public final class MobAiOptimizer {
      */
     public boolean shouldSkipDistantMobAi(double distToNearestPlayerBlocks, long worldTick, int entityId) {
         if (!enabled) return false;
-        if (distToNearestPlayerBlocks > 128.0) {
+        if (distToNearestPlayerBlocks > 256.0) {
+            return ((worldTick + entityId) % 40) != 0; // Tick only once every 2s for extreme range (16-32 chunks)
+        } else if (distToNearestPlayerBlocks > 128.0) {
             return ((worldTick + entityId) % 20) != 0; // Tick only 1 Hz for extreme range
         } else if (distToNearestPlayerBlocks > 64.0) {
             return ((worldTick + entityId) % 5) != 0;  // Tick only 4 Hz for distant mobs

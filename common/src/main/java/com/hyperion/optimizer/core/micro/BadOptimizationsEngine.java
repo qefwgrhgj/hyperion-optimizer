@@ -21,7 +21,7 @@ public final class BadOptimizationsEngine {
     private volatile boolean enableBiomeBlendCaching = true;
     private volatile boolean enableDebugOverlayCaching = true;
 
-    public static final int MAX_CACHE_ENTRIES = 4096;
+    public static final int MAX_CACHE_ENTRIES = 131072; // Scaled to easily hold 32-64 chunk render distances (up to 4,225 chunks) without cache thrashing
 
     // 1. Lightmap State Cache
     private float lastSkyDarken = -1.0f;
@@ -31,9 +31,9 @@ public final class BadOptimizationsEngine {
     private boolean isLightmapDirty = true;
 
     // 2. Biome Blend Fast Cache (Key: (chunkX << 16) | chunkZ)
-    private final Map<Long, Integer> grassColorCache = new ConcurrentHashMap<>(1024);
-    private final Map<Long, Integer> foliageColorCache = new ConcurrentHashMap<>(1024);
-    private final Map<Long, Integer> waterColorCache = new ConcurrentHashMap<>(1024);
+    private final Map<Long, Integer> grassColorCache = new ConcurrentHashMap<>(8192);
+    private final Map<Long, Integer> foliageColorCache = new ConcurrentHashMap<>(8192);
+    private final Map<Long, Integer> waterColorCache = new ConcurrentHashMap<>(8192);
 
     // 3. Debug Overlay String Cache
     private final Map<String, String> debugLineCache = new ConcurrentHashMap<>(64);
