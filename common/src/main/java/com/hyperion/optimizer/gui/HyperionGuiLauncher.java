@@ -328,7 +328,10 @@ public final class HyperionGuiLauncher {
         frame.add(bottomPanel, BorderLayout.SOUTH);
 
         refreshOptions.run();
+        frame.setAlwaysOnTop(true);
         frame.setVisible(true);
+        frame.toFront();
+        frame.requestFocus();
     }
 
     @SuppressWarnings("unchecked")

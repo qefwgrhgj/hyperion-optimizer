@@ -28,7 +28,11 @@ public final class HyperionKeyBindingManager {
     private final AtomicBoolean requestOpenScreen = new AtomicBoolean(false);
     private volatile Runnable screenOpener;
 
-    private HyperionKeyBindingManager() {}
+    private final AtomicBoolean pollerStarted = new AtomicBoolean(false);
+
+    private HyperionKeyBindingManager() {
+        startGlfwKeyPoller();
+    }
 
     public static HyperionKeyBindingManager getInstance() {
         return INSTANCE;
@@ -36,6 +40,46 @@ public final class HyperionKeyBindingManager {
 
     public void setScreenOpener(Runnable opener) {
         this.screenOpener = opener;
+    }
+
+    public void startGlfwKeyPoller() {
+        if (!pollerStarted.compareAndSet(false, true)) return;
+        Thread t = new Thread(() -> {
+            try {
+                Class<?> glfwClass = Class.forName("org.lwjgl.glfw.GLFW");
+                java.lang.reflect.Method getCurrentContextMethod = glfwClass.getMethod("glfwGetCurrentContext");
+                java.lang.reflect.Method getKeyMethod = glfwClass.getMethod("glfwGetKey", long.class, int.class);
+
+                boolean wasPressed = false;
+                while (enabled) {
+                    try {
+                        Thread.sleep(60); // 16 Hz check (~0.0001% CPU)
+                        long window = (long) getCurrentContextMethod.invoke(null);
+                        if (window != 0) {
+                            int stateRctrl = (int) getKeyMethod.invoke(null, window, GLFW_KEY_RIGHT_CONTROL);
+                            int state0 = (int) getKeyMethod.invoke(null, window, GLFW_KEY_0);
+                            int stateH = (int) getKeyMethod.invoke(null, window, GLFW_KEY_H);
+                            int stateLctrl = (int) getKeyMethod.invoke(null, window, GLFW_KEY_LEFT_CONTROL);
+                            int stateLshift = (int) getKeyMethod.invoke(null, window, 340); // GLFW_KEY_LEFT_SHIFT
+
+                            boolean isRctrl = (stateRctrl == 1);
+                            boolean isCombo = ((state0 == 1 || stateH == 1) && (stateLctrl == 1 || stateLshift == 1));
+
+                            if ((isRctrl || isCombo) && !wasPressed) {
+                                wasPressed = true;
+                                triggerOpenScreen();
+                            } else if (!isRctrl && !isCombo) {
+                                wasPressed = false;
+                            }
+                        }
+                    } catch (Throwable t2) {
+                        Thread.sleep(500);
+                    }
+                }
+            } catch (Throwable ignored) {}
+        }, "Hyperion-KeyPoller");
+        t.setDaemon(true);
+        t.start();
     }
 
     public void triggerOpenScreen() {
