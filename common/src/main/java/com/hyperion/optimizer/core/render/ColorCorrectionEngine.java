@@ -36,6 +36,7 @@ public final class ColorCorrectionEngine {
     private volatile float nightAmbientBoost = 0.10f;
     private volatile int colorTemperature = 6500;
     private volatile boolean debanding = true;
+    private volatile boolean texturePackGradingEnabled = false;
 
     // Precomputed cached temperature balance multipliers to eliminate per-pixel Math.log / Math.pow on CPU
     private volatile float cachedTempR = 1.0f;
@@ -58,6 +59,7 @@ public final class ColorCorrectionEngine {
     public void configure(HyperionConfig config) {
         if (config == null) return;
         this.enabled = config.enableColorCorrection;
+        this.texturePackGradingEnabled = config.enableTexturePackColorCorrection;
         try {
             if (config.colorGradingMode != null) {
                 this.mode = Mode.valueOf(config.colorGradingMode);
@@ -242,18 +244,18 @@ public final class ColorCorrectionEngine {
     }
 
     /**
-     * Applies ACES Filmic + Vibrance + Contrast color grading to raw texture/sprite RGB triples.
-     * Preserves true zero black levels (no ambient floor lift) and highlight normalization.
+     * Applies subtle, non-destructive color enhancement to raw texture/sprite RGB triples.
+     * Preserves exact artist intentions, true zero black levels, and prevents double-saturation with the Lightmap.
      */
     public void gradeTextureRgb(float r, float g, float b, float[] outRgb) {
-        if (!enabled) {
+        if (!enabled || !texturePackGradingEnabled) {
             outRgb[0] = clamp01(r);
             outRgb[1] = clamp01(g);
             outRgb[2] = clamp01(b);
             return;
         }
 
-        // 1. Color Temperature (Kelvin) White Balance
+        // 1. Subtle Color Temperature (Kelvin) White Balance
         if (colorTemperature != 6500) {
             applyColorTemperature(r, g, b, outRgb);
             r = outRgb[0];
@@ -261,50 +263,19 @@ public final class ColorCorrectionEngine {
             b = outRgb[2];
         }
 
-        // 2. Contrast Adjustment around mid-gray 0.5
-        if (contrast != 1.0f) {
-            r = (r - 0.5f) * contrast + 0.5f;
-            g = (g - 0.5f) * contrast + 0.5f;
-            b = (b - 0.5f) * contrast + 0.5f;
-        }
-
-        // 3. Normalized ACES Filmic Tone Mapping with Hue Preservation
-        if (mode == Mode.VIBRANT_HDR || mode == Mode.CINEMATIC_FILMIC) {
-            float lumPre = 0.2126f * Math.max(0.0f, r) + 0.7152f * Math.max(0.0f, g) + 0.0722f * Math.max(0.0f, b);
-            float lumMapped = acesTonemap(lumPre);
-            if (lumPre > 0.00001f) {
-                float scale = lumMapped / lumPre;
-                float rChan = acesTonemap(r);
-                float gChan = acesTonemap(g);
-                float bChan = acesTonemap(b);
-                r = 0.85f * (r * scale) + 0.15f * rChan;
-                g = 0.85f * (g * scale) + 0.15f * gChan;
-                b = 0.85f * (b * scale) + 0.15f * bChan;
-            } else {
-                r = acesTonemap(r);
-                g = acesTonemap(g);
-                b = acesTonemap(b);
-            }
-        }
-
-        // 4. Smooth Perceptual Vibrance & Saturation
+        // 2. Subtle, balanced vibrance enhancement (gentle 25% curve to avoid double-saturation)
+        float subtleVibrance = 1.0f + (vibrance - 1.0f) * 0.25f;
+        float subtleSat = 1.0f + (saturation - 1.0f) * 0.25f;
         float maxC = Math.max(r, Math.max(g, b));
         float minC = Math.min(r, Math.min(g, b));
         float currentSat = (maxC > minC) ? ((maxC - minC) / (maxC + 0.05f)) : 0.0f;
-        float vibranceBoost = (1.0f - currentSat) * (vibrance - 1.0f);
-        float totalSat = saturation + vibranceBoost;
+        float vibranceBoost = (1.0f - currentSat) * (subtleVibrance - 1.0f);
+        float totalSat = subtleSat + vibranceBoost;
 
         float gradedLum = 0.2126f * r + 0.7152f * g + 0.0722f * b;
         r = gradedLum + (r - gradedLum) * totalSat;
         g = gradedLum + (g - gradedLum) * totalSat;
         b = gradedLum + (b - gradedLum) * totalSat;
-
-        // 5. Fast LUT Gamma Power Correction
-        if (gammaBoost > 0.01f && gammaBoost != 1.0f) {
-            r = fastGamma(r);
-            g = fastGamma(g);
-            b = fastGamma(b);
-        }
 
         outRgb[0] = clamp01(r);
         outRgb[1] = clamp01(g);
@@ -316,7 +287,7 @@ public final class ColorCorrectionEngine {
      * Preserves transparent (alpha 0) and translucent alpha channels with zero heap allocation.
      */
     public void processTexture(int[] pixels, int width, int height) {
-        if (!enabled || pixels == null || width <= 0 || height <= 0) return;
+        if (!enabled || !texturePackGradingEnabled || pixels == null || width <= 0 || height <= 0) return;
         int total = Math.min(pixels.length, width * height);
         float[] temp = TEMP_RGB.get();
 
@@ -343,7 +314,7 @@ public final class ColorCorrectionEngine {
      * Fast in-place transformation of NativeImage Little-Endian ABGR Texture Pack pixel buffers.
      */
     public void processTextureAbgr(int[] pixels, int width, int height) {
-        if (!enabled || pixels == null || width <= 0 || height <= 0) return;
+        if (!enabled || !texturePackGradingEnabled || pixels == null || width <= 0 || height <= 0) return;
         int total = Math.min(pixels.length, width * height);
         float[] temp = TEMP_RGB.get();
 
@@ -370,7 +341,7 @@ public final class ColorCorrectionEngine {
      * Grades a single ARGB integer color (e.g. Grass/Foliage/Water Colormaps from texture packs).
      */
     public int gradeColorRgbInt(int argb) {
-        if (!enabled) return argb;
+        if (!enabled || !texturePackGradingEnabled) return argb;
         int a = (argb >> 24) & 0xFF;
         float r = ((argb >> 16) & 0xFF) / 255.0f;
         float g = ((argb >> 8) & 0xFF) / 255.0f;

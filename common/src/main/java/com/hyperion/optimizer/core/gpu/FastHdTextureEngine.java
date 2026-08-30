@@ -125,16 +125,16 @@ public final class FastHdTextureEngine {
      * around leaves, foliage, glass, saplings, and icons.
      * This filter propagates edge colors into adjacent transparent pixels, completely eliminating black border artifacts.
      */
-    public static void dilateAlphaBleed(int[] pixels, int width, int height) {
-        if (pixels == null || width <= 1 || height <= 1 || pixels.length < width * height) return;
+    public static void dilateAlphaBleed(int[] pixels, int width, int height, boolean isAbgr) {
+        if (pixels == null || width <= 0 || height <= 0 || pixels.length < width * height) return;
 
         int total = width * height;
         int[] pass = new int[total];
         boolean hasTransparent = false;
 
         for (int i = 0; i < total; i++) {
-            int argb = pixels[i];
-            int a = (argb >> 24) & 0xFF;
+            int col = pixels[i];
+            int a = (col >> 24) & 0xFF;
             if (a == 0) {
                 hasTransparent = true;
             }
@@ -147,47 +147,35 @@ public final class FastHdTextureEngine {
         for (int y = 0; y < height; y++) {
             for (int x = 0; x < width; x++) {
                 int idx = y * width + x;
-                int argb = pixels[idx];
-                int a = (argb >> 24) & 0xFF;
+                int col = pixels[idx];
+                int a = (col >> 24) & 0xFF;
 
                 if (a == 0) {
                     // Average RGB of non-transparent 4-connected neighbors
                     int sumR = 0, sumG = 0, sumB = 0, count = 0;
 
-                    if (x > 0) {
-                        int n = pixels[idx - 1];
-                        if (((n >> 24) & 0xFF) > 0) {
-                            sumR += (n >> 16) & 0xFF;
-                            sumG += (n >> 8) & 0xFF;
-                            sumB += n & 0xFF;
-                            count++;
-                        }
-                    }
-                    if (x < width - 1) {
-                        int n = pixels[idx + 1];
-                        if (((n >> 24) & 0xFF) > 0) {
-                            sumR += (n >> 16) & 0xFF;
-                            sumG += (n >> 8) & 0xFF;
-                            sumB += n & 0xFF;
-                            count++;
-                        }
-                    }
-                    if (y > 0) {
-                        int n = pixels[idx - width];
-                        if (((n >> 24) & 0xFF) > 0) {
-                            sumR += (n >> 16) & 0xFF;
-                            sumG += (n >> 8) & 0xFF;
-                            sumB += n & 0xFF;
-                            count++;
-                        }
-                    }
-                    if (y < height - 1) {
-                        int n = pixels[idx + width];
-                        if (((n >> 24) & 0xFF) > 0) {
-                            sumR += (n >> 16) & 0xFF;
-                            sumG += (n >> 8) & 0xFF;
-                            sumB += n & 0xFF;
-                            count++;
+                    int[] neighborIndices = {
+                        (x > 0) ? (idx - 1) : -1,
+                        (x < width - 1) ? (idx + 1) : -1,
+                        (y > 0) ? (idx - width) : -1,
+                        (y < height - 1) ? (idx + width) : -1
+                    };
+
+                    for (int nIdx : neighborIndices) {
+                        if (nIdx >= 0) {
+                            int n = pixels[nIdx];
+                            if (((n >> 24) & 0xFF) > 0) {
+                                if (isAbgr) {
+                                    sumR += n & 0xFF;
+                                    sumG += (n >> 8) & 0xFF;
+                                    sumB += (n >> 16) & 0xFF;
+                                } else {
+                                    sumR += (n >> 16) & 0xFF;
+                                    sumG += (n >> 8) & 0xFF;
+                                    sumB += n & 0xFF;
+                                }
+                                count++;
+                            }
                         }
                     }
 
@@ -195,13 +183,21 @@ public final class FastHdTextureEngine {
                         int avgR = sumR / count;
                         int avgG = sumG / count;
                         int avgB = sumB / count;
-                        pass[idx] = (avgR << 16) | (avgG << 8) | avgB; // Retain alpha 0 with neighbor color
+                        if (isAbgr) {
+                            pass[idx] = (avgB << 16) | (avgG << 8) | avgR; // ABGR with alpha 0
+                        } else {
+                            pass[idx] = (avgR << 16) | (avgG << 8) | avgB; // ARGB with alpha 0
+                        }
                     }
                 }
             }
         }
 
         System.arraycopy(pass, 0, pixels, 0, total);
+    }
+
+    public static void dilateAlphaBleed(int[] pixels, int width, int height) {
+        dilateAlphaBleed(pixels, width, height, false);
     }
 
     /**
@@ -211,7 +207,7 @@ public final class FastHdTextureEngine {
     public static void dilateAndColorCorrectTexturePack(int[] pixels, int width, int height, boolean isAbgr, com.hyperion.optimizer.core.render.ColorCorrectionEngine colorEngine) {
         if (pixels == null || width <= 0 || height <= 0) return;
 
-        // 1. Apply ACES Filmic & Vibrance Color Correction to texture pixels
+        // 1. Apply subtle Color Enhancement if explicitly enabled in configuration
         if (colorEngine != null && colorEngine.isEnabled()) {
             if (isAbgr) {
                 colorEngine.processTextureAbgr(pixels, width, height);
@@ -221,7 +217,7 @@ public final class FastHdTextureEngine {
         }
 
         // 2. Propagate edge colors into adjacent transparent pixels to prevent dark mipmap outlines
-        dilateAlphaBleed(pixels, width, height);
+        dilateAlphaBleed(pixels, width, height, isAbgr);
     }
 
     /**

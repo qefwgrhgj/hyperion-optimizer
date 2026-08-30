@@ -144,7 +144,7 @@ public final class HyperionOptionsRegistry {
             HyperionCategory.GRAPHICS_SETTINGS,
             c -> c.enableTexturePackColorCorrection,
             (c, v) -> c.enableTexturePackColorCorrection = v,
-            true
+            false
         ));
         register(HyperionOption.createCycle(
             "colorGradingMode",
@@ -650,7 +650,7 @@ public final class HyperionOptionsRegistry {
             HyperionCategory.COLOR_CORRECTION,
             c -> c.enableTexturePackColorCorrection,
             (c, v) -> c.enableTexturePackColorCorrection = v,
-            true
+            false
         ));
         register(HyperionOption.createCycle(
             "colorGradingMode",

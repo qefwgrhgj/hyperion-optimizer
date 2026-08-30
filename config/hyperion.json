@@ -31,7 +31,7 @@
   "colorNightAmbientBoost": 0.1,
   "colorTemperature": 6500,
   "enableColorDebanding": true,
-  "enableTexturePackColorCorrection": true,
+  "enableTexturePackColorCorrection": false,
   "enableAmdHardwareAcceleration": true,
   "amdArchitectureProfile": "AUTO",
   "amdWavefrontSize": 64,
