@@ -2935,7 +2935,7 @@ public class HyperionTestRunner {
         // Test persistence round-trip
         String json = HyperionConfigStorage.serializeJson(cfg);
         HyperionConfig parsed = HyperionConfigStorage.parseJson(json);
-        if (!parsed.enableColorCorrection || !"VIBRANT_HDR".equals(parsed.colorGradingMode) || Math.abs(parsed.colorBlackCrushCompensation - 0.08) > 0.001) {
+        if (!parsed.enableColorCorrection || !"NATURAL_BALANCED".equals(parsed.colorGradingMode) || Math.abs(parsed.colorBlackCrushCompensation - 0.08) > 0.001) {
             throw new AssertionError("Color correction config roundtrip serialization mismatch");
         }
 

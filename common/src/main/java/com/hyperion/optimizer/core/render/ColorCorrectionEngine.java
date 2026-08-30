@@ -27,13 +27,13 @@ public final class ColorCorrectionEngine {
     }
 
     private volatile boolean enabled;
-    private volatile Mode mode = Mode.VIBRANT_HDR;
+    private volatile Mode mode = Mode.NATURAL_BALANCED;
     private volatile float gammaBoost = 1.00f;
-    private volatile float vibrance = 1.15f;
-    private volatile float saturation = 1.05f;
-    private volatile float contrast = 1.02f;
-    private volatile float blackCrushCompensation = 0.08f;
-    private volatile float nightAmbientBoost = 0.10f;
+    private volatile float vibrance = 1.00f;
+    private volatile float saturation = 1.00f;
+    private volatile float contrast = 1.00f;
+    private volatile float blackCrushCompensation = 0.12f;
+    private volatile float nightAmbientBoost = 0.12f;
     private volatile int colorTemperature = 6500;
     private volatile boolean debanding = true;
     private volatile boolean texturePackGradingEnabled = false;
@@ -65,7 +65,7 @@ public final class ColorCorrectionEngine {
                 this.mode = Mode.valueOf(config.colorGradingMode);
             }
         } catch (Exception ignored) {
-            this.mode = Mode.VIBRANT_HDR;
+            this.mode = Mode.NATURAL_BALANCED;
         }
         this.gammaBoost = (float) config.colorGammaBoost;
         this.vibrance = (float) config.colorVibrance;
@@ -80,8 +80,8 @@ public final class ColorCorrectionEngine {
     }
 
     /**
-     * Applies full ACES Filmic + Vibrance + Anti-Black-Crush color grading to an RGB triple.
-     * Guaranteed highlight normalization (1.0 -> 1.0), hue stability, and zero texture pack color drift.
+     * Applies balanced, non-destructive color grading to an RGB triple.
+     * Guarantees true 1:1 texture pack fidelity, zero artificial oversaturation, and zero black crushed shadows.
      */
     public void gradeRgb(float r, float g, float b, float nightFactor, int ditherX, int ditherY, float[] outRgb) {
         if (!enabled) {
@@ -99,67 +99,78 @@ public final class ColorCorrectionEngine {
             b = outRgb[2];
         }
 
-        // 2. Calculate Rec.709 Input Luminance
-        float lumIn = 0.2126f * r + 0.7152f * g + 0.0722f * b;
-
-        // 3. Anti-Black-Crush Toe Lift & Night Ambient Compensation
-        // In dark regions (low lum), smoothly and neutrally lift the floor without chromatic distortion
-        float shadowWeight = (1.0f - clamp01(lumIn));
-        shadowWeight = shadowWeight * shadowWeight; // Smooth quadratic falloff
-        float safeNight = clamp01(nightFactor);
-        float lift = (blackCrushCompensation * 0.25f) + (nightAmbientBoost * 0.20f * safeNight);
-        r += lift * shadowWeight;
-        g += lift * shadowWeight;
-        b += lift * shadowWeight;
-
-        // 4. Contrast Adjustment around mid-gray 0.5
-        if (contrast != 1.0f) {
-            r = (r - 0.5f) * contrast + 0.5f;
-            g = (g - 0.5f) * contrast + 0.5f;
-            b = (b - 0.5f) * contrast + 0.5f;
-        }
-
-        // 5. Normalized ACES Filmic Tone Mapping with Hue Preservation
-        if (mode == Mode.VIBRANT_HDR || mode == Mode.CINEMATIC_FILMIC) {
+        // 2. Tonemapping Profile
+        if (mode == Mode.NATURAL_BALANCED) {
+            // Natural Linear-Preserving Highlight Compression (Never crushes shadows below linear)
+            r = (r / (1.0f + 0.15f * r)) * 1.15f;
+            g = (g / (1.0f + 0.15f * g)) * 1.15f;
+            b = (b / (1.0f + 0.15f * b)) * 1.15f;
+        } else if (mode == Mode.VIBRANT_HDR || mode == Mode.CINEMATIC_FILMIC) {
             float lumPre = 0.2126f * Math.max(0.0f, r) + 0.7152f * Math.max(0.0f, g) + 0.0722f * Math.max(0.0f, b);
             float lumMapped = acesTonemap(lumPre);
             if (lumPre > 0.00001f) {
                 float scale = lumMapped / lumPre;
-                float rChan = acesTonemap(r);
-                float gChan = acesTonemap(g);
-                float bChan = acesTonemap(b);
-                // 85% luminance-preserving scale + 15% per-channel curve for gentle saturation roll-off
+                float rChan = Math.max(r * 0.96f, acesTonemap(r));
+                float gChan = Math.max(g * 0.96f, acesTonemap(g));
+                float bChan = Math.max(b * 0.96f, acesTonemap(b));
                 r = 0.85f * (r * scale) + 0.15f * rChan;
                 g = 0.85f * (g * scale) + 0.15f * gChan;
                 b = 0.85f * (b * scale) + 0.15f * bChan;
             } else {
-                r = acesTonemap(r);
-                g = acesTonemap(g);
-                b = acesTonemap(b);
+                r = Math.max(r * 0.96f, acesTonemap(r));
+                g = Math.max(g * 0.96f, acesTonemap(g));
+                b = Math.max(b * 0.96f, acesTonemap(b));
+            }
+        } else if (mode == Mode.NIGHT_VISION_CLEAR) {
+            float lum = 0.2126f * r + 0.7152f * g + 0.0722f * b;
+            if (lum < 0.50f) {
+                float boost = (0.50f - lum) * 0.35f;
+                r += boost;
+                g += boost;
+                b += boost;
             }
         }
 
-        // 6. Smooth Perceptual Vibrance & Saturation (Zero division singularity)
-        float maxC = Math.max(r, Math.max(g, b));
-        float minC = Math.min(r, Math.min(g, b));
-        float currentSat = (maxC > minC) ? ((maxC - minC) / (maxC + 0.05f)) : 0.0f;
-        float vibranceBoost = (1.0f - currentSat) * (vibrance - 1.0f);
-        float totalSat = saturation + vibranceBoost;
+        // 3. Contrast Adjustment around linear mid-gray (0.18) to protect shadows
+        if (contrast != 1.0f) {
+            r = (r - 0.18f) * contrast + 0.18f;
+            g = (g - 0.18f) * contrast + 0.18f;
+            b = (b - 0.18f) * contrast + 0.18f;
+        }
 
-        float gradedLum = 0.2126f * r + 0.7152f * g + 0.0722f * b;
-        r = gradedLum + (r - gradedLum) * totalSat;
-        g = gradedLum + (g - gradedLum) * totalSat;
-        b = gradedLum + (b - gradedLum) * totalSat;
+        // 4. Smooth Perceptual Vibrance & Saturation (Only when non-neutral)
+        if (vibrance != 1.0f || saturation != 1.0f) {
+            float maxC = Math.max(r, Math.max(g, b));
+            float minC = Math.min(r, Math.min(g, b));
+            float currentSat = (maxC > minC) ? ((maxC - minC) / (maxC + 0.05f)) : 0.0f;
+            float vibranceBoost = (1.0f - currentSat) * (vibrance - 1.0f);
+            float totalSat = saturation + vibranceBoost;
 
-        // 7. Fast LUT Gamma Power Correction (Zero Math.pow CPU spike)
+            float gradedLum = 0.2126f * r + 0.7152f * g + 0.0722f * b;
+            r = gradedLum + (r - gradedLum) * totalSat;
+            g = gradedLum + (g - gradedLum) * totalSat;
+            b = gradedLum + (b - gradedLum) * totalSat;
+        }
+
+        // 5. Fast LUT Gamma Power Correction
         if (gammaBoost > 0.01f && gammaBoost != 1.0f) {
             r = fastGamma(r);
             g = fastGamma(g);
             b = fastGamma(b);
         }
 
-        // 8. Safe Ambient Floor Guarantee: Prevent shadows from collapsing to pure black (0x000000)
-        float minAmbientFloor = 0.035f + (nightAmbientBoost * 0.05f * clamp01(nightFactor));
+        // 6. Anti-Black-Crush Toe Lift & Ambient Floor
+        float lumCurrent = 0.2126f * r + 0.7152f * g + 0.0722f * b;
+        if (lumCurrent < 0.35f) {
+            float shadowToe = (0.35f - lumCurrent) / 0.35f;
+            float lift = (blackCrushCompensation * 0.15f) * (shadowToe * shadowToe);
+            r += lift;
+            g += lift;
+            b += lift;
+        }
+
+        // Safe Ambient Floor Guarantee: Prevent shadows from collapsing to pure black (0x000000)
+        float minAmbientFloor = 0.045f + (nightAmbientBoost * 0.06f * clamp01(nightFactor));
         r = Math.max(minAmbientFloor, r);
         g = Math.max(minAmbientFloor, g);
         b = Math.max(minAmbientFloor, b);

@@ -155,7 +155,7 @@ public final class HyperionOptionsRegistry {
             (c, v) -> c.colorGradingMode = v,
             new String[]{"VIBRANT_HDR", "NIGHT_VISION_CLEAR", "CINEMATIC_FILMIC", "NATURAL_BALANCED", "CUSTOM"},
             new String[]{"Vibrant HDR (Яркий)", "Clear Night (Ночной обзор)", "Cinematic Filmic (Кино)", "Natural Balanced (Натуральный)", "Custom (Пользовательский)"},
-            "VIBRANT_HDR"
+            "NATURAL_BALANCED"
         ));
         register(HyperionOption.createBoolean(
             "enableChunkLod",
@@ -661,7 +661,7 @@ public final class HyperionOptionsRegistry {
             (c, v) -> c.colorGradingMode = v,
             new String[]{"VIBRANT_HDR", "NIGHT_VISION_CLEAR", "CINEMATIC_FILMIC", "NATURAL_BALANCED", "CUSTOM"},
             new String[]{"Vibrant HDR (Яркий)", "Clear Night (Ночной обзор)", "Cinematic Filmic (Кино)", "Natural Balanced (Натуральный)", "Custom (Пользовательский)"},
-            "VIBRANT_HDR"
+            "NATURAL_BALANCED"
         ));
         register(HyperionOption.createDoubleSlider(
             "colorVibrance",
@@ -670,7 +670,7 @@ public final class HyperionOptionsRegistry {
             HyperionCategory.COLOR_CORRECTION,
             c -> c.colorVibrance,
             (c, v) -> c.colorVibrance = v,
-            1.15, 0.8, 2.0, 0.05
+            1.00, 0.5, 2.0, 0.05
         ));
         register(HyperionOption.createDoubleSlider(
             "colorSaturation",
@@ -679,7 +679,7 @@ public final class HyperionOptionsRegistry {
             HyperionCategory.COLOR_CORRECTION,
             c -> c.colorSaturation,
             (c, v) -> c.colorSaturation = v,
-            1.05, 0.5, 2.0, 0.05
+            1.00, 0.5, 2.0, 0.05
         ));
         register(HyperionOption.createDoubleSlider(
             "colorContrast",
@@ -688,7 +688,7 @@ public final class HyperionOptionsRegistry {
             HyperionCategory.COLOR_CORRECTION,
             c -> c.colorContrast,
             (c, v) -> c.colorContrast = v,
-            1.02, 0.8, 1.5, 0.02
+            1.00, 0.5, 1.5, 0.02
         ));
         register(HyperionOption.createDoubleSlider(
             "colorBlackCrushCompensation",
@@ -697,7 +697,7 @@ public final class HyperionOptionsRegistry {
             HyperionCategory.COLOR_CORRECTION,
             c -> c.colorBlackCrushCompensation,
             (c, v) -> c.colorBlackCrushCompensation = v,
-            0.08, 0.0, 0.30, 0.01
+            0.12, 0.0, 0.30, 0.01
         ));
         register(HyperionOption.createDoubleSlider(
             "colorNightAmbientBoost",
@@ -706,7 +706,7 @@ public final class HyperionOptionsRegistry {
             HyperionCategory.COLOR_CORRECTION,
             c -> c.colorNightAmbientBoost,
             (c, v) -> c.colorNightAmbientBoost = v,
-            0.10, 0.0, 0.50, 0.05
+            0.12, 0.0, 0.50, 0.05
         ));
         register(HyperionOption.createBoolean(
             "enableColorDebanding",
