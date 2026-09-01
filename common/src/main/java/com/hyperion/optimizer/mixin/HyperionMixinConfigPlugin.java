@@ -1,5 +1,6 @@
 package com.hyperion.optimizer.mixin;
 
+import java.net.URL;
 import java.util.List;
 import java.util.Set;
 import org.objectweb.asm.tree.ClassNode;
@@ -9,15 +10,27 @@ import org.spongepowered.asm.mixin.extensibility.IMixinInfo;
 /**
  * ⚡ Hyperion Sovereign Cross-Version Mixin Configuration Governor.
  *
- * Dynamically validates target class presence across Minecraft 1.16.5 -> 1.21.11 / 26.2.
- * Prevents MixinTargetValidationException and ClassNotFoundException when packaging
- * or method signatures diverge across loader/version matrix boundaries.
+ * Dynamically validates and filters mixins across Minecraft 1.16.5 -> 1.21.11 / 26.2.
+ * Uses zero-classloading resource lookup to ensure NO game classes are loaded prematurely
+ * (preventing MixinTargetAlreadyLoadedException).
  */
 public class HyperionMixinConfigPlugin implements IMixinConfigPlugin {
+
+    private boolean isModern26 = false;
 
     @Override
     public void onLoad(String mixinPackage) {
         System.out.println("[Hyperion] Mixin Config Plugin loaded for package: " + mixinPackage);
+        try {
+            ClassLoader cl = Thread.currentThread().getContextClassLoader();
+            if (cl == null) {
+                cl = HyperionMixinConfigPlugin.class.getClassLoader();
+            }
+            URL url = cl.getResource("net/minecraft/world/level/ServerExplosion.class");
+            isModern26 = (url != null);
+        } catch (Throwable ignored) {
+            isModern26 = false;
+        }
     }
 
     @Override
@@ -27,93 +40,26 @@ public class HyperionMixinConfigPlugin implements IMixinConfigPlugin {
 
     @Override
     public boolean shouldApplyMixin(String targetClassName, String mixinClassName) {
-        if (mixinClassName != null && mixinClassName.endsWith("MixinExplosion")) {
-            // MixinExplosion targets legacy Explosion class (<= 1.21.1).
-            // In 1.21.2+ and 26.2, net.minecraft.world.level.Explosion was refactored into an interface.
-            // Skip MixinExplosion on modern versions to prevent InvalidMixinException: @Mixin target type mismatch.
-            try {
-                Class<?> explosionClass = Class.forName("net.minecraft.world.level.Explosion", false, Thread.currentThread().getContextClassLoader());
-                if (explosionClass.isInterface()) {
-                    return false;
-                }
-            } catch (Throwable ignored) {
-                try {
-                    Class<?> explosionClass = Class.forName("net.minecraft.world.level.Explosion", false, HyperionMixinConfigPlugin.class.getClassLoader());
-                    if (explosionClass.isInterface()) {
-                        return false;
-                    }
-                } catch (Throwable ignored2) {}
-            }
-        }
-
-        if (mixinClassName != null && mixinClassName.endsWith("MixinServerExplosion")) {
-            // MixinServerExplosion targets ServerExplosion class in modern versions (1.21.2+ / 26.2).
-            try {
-                Class<?> serverExplosionClass = Class.forName("net.minecraft.world.level.ServerExplosion", false, Thread.currentThread().getContextClassLoader());
-                return !serverExplosionClass.isInterface();
-            } catch (Throwable ignored) {
-                try {
-                    Class<?> serverExplosionClass = Class.forName("net.minecraft.world.level.ServerExplosion", false, HyperionMixinConfigPlugin.class.getClassLoader());
-                    return !serverExplosionClass.isInterface();
-                } catch (Throwable ignored2) {
-                    return false;
-                }
-            }
-        }
-
-        if (mixinClassName != null && mixinClassName.endsWith("MixinInGameHud")) {
-            // MixinInGameHud targets Gui.render(). In modern versions (like 26.2), Gui has no render() method.
-            // Skip applying MixinInGameHud if Gui lacks a render method to prevent breaking GuiMixin in Fabric Screen API.
-            try {
-                Class<?> guiClass = Class.forName("net.minecraft.client.gui.Gui", false, Thread.currentThread().getContextClassLoader());
-                boolean hasRender = false;
-                for (java.lang.reflect.Method m : guiClass.getDeclaredMethods()) {
-                    if (m.getName().equals("render")) {
-                        hasRender = true;
-                        break;
-                    }
-                }
-                if (!hasRender) {
-                    return false;
-                }
-            } catch (Throwable ignored) {
-                try {
-                    Class<?> guiClass = Class.forName("net.minecraft.client.gui.Gui", false, HyperionMixinConfigPlugin.class.getClassLoader());
-                    boolean hasRender = false;
-                    for (java.lang.reflect.Method m : guiClass.getDeclaredMethods()) {
-                        if (m.getName().equals("render")) {
-                            hasRender = true;
-                            break;
-                        }
-                    }
-                    if (!hasRender) {
-                        return false;
-                    }
-                } catch (Throwable ignored2) {}
-            }
-        }
-
-        if (targetClassName == null || targetClassName.isEmpty()) {
+        if (mixinClassName == null) {
             return true;
         }
 
-        try {
-            Class<?> clazz = Class.forName(targetClassName, false, Thread.currentThread().getContextClassLoader());
-            if (clazz.isInterface()) {
-                return false;
-            }
-            return true;
-        } catch (ClassNotFoundException | NoClassDefFoundError ignored) {
-            try {
-                Class<?> clazz = Class.forName(targetClassName, false, HyperionMixinConfigPlugin.class.getClassLoader());
-                if (clazz.isInterface()) {
-                    return false;
-                }
-                return true;
-            } catch (ClassNotFoundException | NoClassDefFoundError ignored2) {
-                return false;
-            }
+        // 1. On modern 1.21.2+ / 26.2, Explosion is an interface. Skip legacy MixinExplosion.
+        if (mixinClassName.endsWith("MixinExplosion")) {
+            return !isModern26;
         }
+
+        // 2. On modern 1.21.2+ / 26.2, ServerExplosion is the concrete class.
+        if (mixinClassName.endsWith("MixinServerExplosion")) {
+            return isModern26;
+        }
+
+        // 3. On modern 1.21.2+ / 26.2, Gui no longer has render(). Skip legacy MixinInGameHud.
+        if (mixinClassName.endsWith("MixinInGameHud")) {
+            return !isModern26;
+        }
+
+        return true;
     }
 
     @Override
