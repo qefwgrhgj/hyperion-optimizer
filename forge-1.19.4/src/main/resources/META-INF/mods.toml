@@ -10,7 +10,7 @@ description='''High-Performance Cross-Platform Minecraft Optimization Engine.'''
 authors="Hyperion Team"
 logoFile="icon.png"
 issueTrackerURL="https://github.com/qefwgrhgj/hyperion-optimizer/issues"
-displayURL="https://modrinth.com/mod/hyperion-optimizer"
+displayURL="https://github.com/qefwgrhgj/hyperion-optimizer"
 
 [[dependencies.hyperion_optimizer]]
     modId="forge"
