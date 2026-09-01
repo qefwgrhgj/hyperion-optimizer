@@ -10,7 +10,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import com.hyperion.optimizer.HyperionEngine;
 import com.hyperion.optimizer.core.entity.StaticChestMeshBaker;
 
-@Mixin(targets = "net.minecraft.client.renderer.blockentity.BlockEntityRenderDispatcher")
+@Mixin(targets = {"net.minecraft.client.renderer.blockentity.BlockEntityRenderDispatcher", "net.minecraft.class_824", "net.minecraft.client.renderer.tileentity.TileEntityRendererDispatcher"})
 @Environment(EnvType.CLIENT)
 public class MixinBlockEntityRenderDispatcher {
     @Inject(method = "render", at = @At("HEAD"))

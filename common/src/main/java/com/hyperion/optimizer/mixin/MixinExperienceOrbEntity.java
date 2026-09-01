@@ -8,7 +8,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import com.hyperion.optimizer.HyperionEngine;
 import com.hyperion.optimizer.core.entity.ExperienceOrbMerger;
 
-@Mixin(targets = "net.minecraft.world.entity.ExperienceOrb")
+@Mixin(targets = {"net.minecraft.world.entity.ExperienceOrb", "net.minecraft.class_1303", "net.minecraft.entity.item.ExperienceOrbEntity"})
 public class MixinExperienceOrbEntity {
     @Inject(method = "tick", at = @At("HEAD"))
     private void onTick(CallbackInfo ci) {

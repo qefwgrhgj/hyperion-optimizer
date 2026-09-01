@@ -8,7 +8,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import com.hyperion.optimizer.HyperionEngine;
 import com.hyperion.optimizer.core.physics.FastRedstoneEngine;
 
-@Mixin(targets = "net.minecraft.world.level.block.RedstoneWireBlock")
+@Mixin(targets = {"net.minecraft.world.level.block.RedstoneWireBlock", "net.minecraft.class_2490", "net.minecraft.block.RedstoneWireBlock"})
 public class MixinRedstoneWireBlock {
     @Inject(method = "updatePowerCycle", at = @At("HEAD"))
     private void onUpdatePowerCycle(CallbackInfo ci) {

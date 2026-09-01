@@ -8,7 +8,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import com.hyperion.optimizer.HyperionEngine;
 import com.hyperion.optimizer.core.physics.FastExplosionEngine;
 
-@Mixin(targets = "net.minecraft.world.level.Explosion")
+@Mixin(targets = {"net.minecraft.world.level.Explosion", "net.minecraft.class_1927", "net.minecraft.world.Explosion"})
 public class MixinExplosion {
     @Inject(method = "explode", at = @At("HEAD"))
     private void onExplode(CallbackInfo ci) {

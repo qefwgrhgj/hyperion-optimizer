@@ -8,7 +8,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import com.hyperion.optimizer.HyperionEngine;
 import com.hyperion.optimizer.core.physics.SleepingHopperManager;
 
-@Mixin(targets = "net.minecraft.world.level.block.entity.HopperBlockEntity")
+@Mixin(targets = {"net.minecraft.world.level.block.entity.HopperBlockEntity", "net.minecraft.class_2615", "net.minecraft.tileentity.HopperTileEntity"})
 public class MixinHopperBlockEntity {
     @Inject(method = "pushAndPull", at = @At("HEAD"))
     private static void onPushAndPull(CallbackInfo ci) {

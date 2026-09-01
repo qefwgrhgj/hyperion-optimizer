@@ -8,7 +8,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import com.hyperion.optimizer.HyperionEngine;
 import com.hyperion.optimizer.core.physics.PathfindingCircuitBreaker;
 
-@Mixin(targets = "net.minecraft.world.entity.ai.navigation.PathNavigation")
+@Mixin(targets = {"net.minecraft.world.entity.ai.navigation.PathNavigation", "net.minecraft.class_1408", "net.minecraft.pathfinding.PathNavigator"})
 public class MixinPathNavigation {
     @Inject(method = "tick", at = @At("HEAD"))
     private void onTickPath(CallbackInfo ci) {

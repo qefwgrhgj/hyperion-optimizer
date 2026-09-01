@@ -14,7 +14,7 @@ import com.hyperion.optimizer.core.render.ColorCorrectionEngine;
  * Mixin hook for Minecraft Lightmap Texture Manager & Color Pipeline.
  * Injects Hyperion's HDR ACES Tonemapping, Anti-Black-Crush, and Vibrance.
  */
-@Mixin(targets = "net.minecraft.client.renderer.LightTexture")
+@Mixin(targets = {"net.minecraft.client.renderer.LightTexture", "net.minecraft.class_765", "net.minecraft.client.renderer.GameRenderer"})
 @Environment(EnvType.CLIENT)
 public class MixinLightmapTexture {
     @Inject(method = "updateLightTexture", at = @At("HEAD"))

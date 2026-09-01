@@ -11,7 +11,7 @@ import com.hyperion.optimizer.HyperionEngine;
 import com.hyperion.optimizer.core.entity.AnimationLodManager;
 import com.hyperion.optimizer.core.entity.EntityDepthCuller;
 
-@Mixin(targets = "net.minecraft.client.renderer.entity.LivingEntityRenderer")
+@Mixin(targets = {"net.minecraft.client.renderer.entity.LivingEntityRenderer", "net.minecraft.class_922", "net.minecraft.client.renderer.entity.LivingRenderer"})
 @Environment(EnvType.CLIENT)
 public class MixinLivingEntityRenderer {
     @Inject(method = "render", at = @At("HEAD"))

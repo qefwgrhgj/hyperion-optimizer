@@ -10,7 +10,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import com.hyperion.optimizer.HyperionEngine;
 import com.hyperion.optimizer.core.network.PacketFlushConsolidator;
 
-@Mixin(targets = "net.minecraft.client.multiplayer.ClientPacketListener")
+@Mixin(targets = {"net.minecraft.client.multiplayer.ClientPacketListener", "net.minecraft.class_634", "net.minecraft.client.network.play.ClientPlayNetHandler"})
 @Environment(EnvType.CLIENT)
 public class MixinClientPlayNetworkHandler {
     @Inject(method = "handleChunkData", at = @At("HEAD"))

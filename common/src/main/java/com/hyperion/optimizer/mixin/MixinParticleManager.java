@@ -10,7 +10,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import com.hyperion.optimizer.HyperionEngine;
 import com.hyperion.optimizer.core.gpu.FastParticleEngine;
 
-@Mixin(targets = "net.minecraft.client.particle.ParticleEngine")
+@Mixin(targets = {"net.minecraft.client.particle.ParticleEngine", "net.minecraft.class_702", "net.minecraft.client.particle.ParticleManager"})
 @Environment(EnvType.CLIENT)
 public class MixinParticleManager {
     @Inject(method = "render", at = @At("HEAD"))

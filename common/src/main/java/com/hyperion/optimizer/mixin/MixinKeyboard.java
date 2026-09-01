@@ -13,7 +13,7 @@ import com.hyperion.optimizer.gui.HyperionKeyBindingManager;
  * Mixin hook into Minecraft Keyboard Input Handler.
  * Intercepts Right Control key (GLFW_KEY_RIGHT_CONTROL = 345) to toggle Hyperion In-Game Settings.
  */
-@Mixin(targets = "net.minecraft.client.KeyboardHandler")
+@Mixin(targets = {"net.minecraft.client.KeyboardHandler", "net.minecraft.class_309", "net.minecraft.client.KeyboardListener"})
 @Environment(EnvType.CLIENT)
 public class MixinKeyboard {
     @Inject(method = "keyPress", at = @At("HEAD"), cancellable = true)

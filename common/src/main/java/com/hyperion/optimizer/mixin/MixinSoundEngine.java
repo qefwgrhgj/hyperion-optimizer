@@ -10,7 +10,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import com.hyperion.optimizer.HyperionEngine;
 import com.hyperion.optimizer.core.audio.AsyncAudioEngine;
 
-@Mixin(targets = "net.minecraft.client.sounds.SoundEngine")
+@Mixin(targets = {"net.minecraft.client.sounds.SoundEngine", "net.minecraft.class_1140", "net.minecraft.client.audio.SoundEngine"})
 @Environment(EnvType.CLIENT)
 public class MixinSoundEngine {
     @Inject(method = "play", at = @At("HEAD"))
