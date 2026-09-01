@@ -21,9 +21,6 @@
     ],
     "client": [
       "com.hyperion.optimizer.fabric.HyperionFabric116"
-    ],
-    "modmenu": [
-      "com.hyperion.optimizer.compat.HyperionModMenuCompat"
     ]
   },
   "mixins": [
