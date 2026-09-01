@@ -27,16 +27,56 @@ public class HyperionMixinConfigPlugin implements IMixinConfigPlugin {
 
     @Override
     public boolean shouldApplyMixin(String targetClassName, String mixinClassName) {
+        if (mixinClassName != null && mixinClassName.endsWith("MixinExplosion")) {
+            // MixinExplosion targets legacy Explosion class (<= 1.21.1).
+            // In 1.21.2+ and 26.2, net.minecraft.world.level.Explosion was refactored into an interface.
+            // Skip MixinExplosion on modern versions to prevent InvalidMixinException: @Mixin target type mismatch.
+            try {
+                Class<?> explosionClass = Class.forName("net.minecraft.world.level.Explosion", false, Thread.currentThread().getContextClassLoader());
+                if (explosionClass.isInterface()) {
+                    return false;
+                }
+            } catch (Throwable ignored) {
+                try {
+                    Class<?> explosionClass = Class.forName("net.minecraft.world.level.Explosion", false, HyperionMixinConfigPlugin.class.getClassLoader());
+                    if (explosionClass.isInterface()) {
+                        return false;
+                    }
+                } catch (Throwable ignored2) {}
+            }
+        }
+
+        if (mixinClassName != null && mixinClassName.endsWith("MixinServerExplosion")) {
+            // MixinServerExplosion targets ServerExplosion class in modern versions (1.21.2+ / 26.2).
+            try {
+                Class<?> serverExplosionClass = Class.forName("net.minecraft.world.level.ServerExplosion", false, Thread.currentThread().getContextClassLoader());
+                return !serverExplosionClass.isInterface();
+            } catch (Throwable ignored) {
+                try {
+                    Class<?> serverExplosionClass = Class.forName("net.minecraft.world.level.ServerExplosion", false, HyperionMixinConfigPlugin.class.getClassLoader());
+                    return !serverExplosionClass.isInterface();
+                } catch (Throwable ignored2) {
+                    return false;
+                }
+            }
+        }
+
         if (targetClassName == null || targetClassName.isEmpty()) {
             return true;
         }
 
         try {
-            Class.forName(targetClassName, false, Thread.currentThread().getContextClassLoader());
+            Class<?> clazz = Class.forName(targetClassName, false, Thread.currentThread().getContextClassLoader());
+            if (clazz.isInterface()) {
+                return false;
+            }
             return true;
         } catch (ClassNotFoundException | NoClassDefFoundError ignored) {
             try {
-                Class.forName(targetClassName, false, HyperionMixinConfigPlugin.class.getClassLoader());
+                Class<?> clazz = Class.forName(targetClassName, false, HyperionMixinConfigPlugin.class.getClassLoader());
+                if (clazz.isInterface()) {
+                    return false;
+                }
                 return true;
             } catch (ClassNotFoundException | NoClassDefFoundError ignored2) {
                 return false;
