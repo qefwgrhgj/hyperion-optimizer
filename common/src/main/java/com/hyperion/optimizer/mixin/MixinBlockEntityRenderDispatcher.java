@@ -3,7 +3,6 @@ package com.hyperion.optimizer.mixin;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import org.spongepowered.asm.mixin.Mixin;
-import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
@@ -19,8 +18,7 @@ public class MixinBlockEntityRenderDispatcher {
         // Fast block entity culling check
     }
 
-    @Unique
-    public static boolean canBakeChestToStaticMesh(long packedPos) {
+    private static boolean canBakeChestToStaticMesh(long packedPos) {
         StaticChestMeshBaker baker = HyperionEngine.getInstance().getChestBaker();
         if (baker != null && baker.isEnabled()) {
             return baker.shouldRenderAsStaticBlock(packedPos);
@@ -28,8 +26,7 @@ public class MixinBlockEntityRenderDispatcher {
         return false;
     }
 
-    @Unique
-    public static boolean shouldCullBlockEntity(double camX, double camY, double camZ,
+    private static boolean shouldCullBlockEntity(double camX, double camY, double camZ,
                                                 double beX, double beY, double beZ,
                                                 boolean isOccluded) {
         com.hyperion.optimizer.core.render.FpsStabilizerEngine stabilizer = HyperionEngine.getInstance().getFpsStabilizer();

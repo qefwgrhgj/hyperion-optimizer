@@ -3,7 +3,6 @@ package com.hyperion.optimizer.mixin;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import org.spongepowered.asm.mixin.Mixin;
-import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
@@ -22,8 +21,7 @@ public class MixinInGameHud {
         shouldRepaintHud(System.nanoTime());
     }
 
-    @Unique
-    public static boolean shouldRepaintHud(long nanoTime) {
+    private static boolean shouldRepaintHud(long nanoTime) {
         DecoupledHudManager hudManager = HyperionEngine.getInstance().getHudManager();
         if (hudManager != null && hudManager.isEnabled()) {
             return hudManager.shouldRepaintHud(nanoTime);
@@ -31,8 +29,7 @@ public class MixinInGameHud {
         return true;
     }
 
-    @Unique
-    public static void onPlayerDamage(float health, int foodLevel, int armor) {
+    private static void onPlayerDamage(float health, int foodLevel, int armor) {
         DecoupledHudManager hudManager = HyperionEngine.getInstance().getHudManager();
         if (hudManager != null && hudManager.isEnabled()) {
             hudManager.getDirtyTracker().updateHealth(health, foodLevel, armor);

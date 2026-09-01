@@ -1,7 +1,6 @@
 package com.hyperion.optimizer.mixin;
 
 import org.spongepowered.asm.mixin.Mixin;
-import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
@@ -16,8 +15,7 @@ public class MixinPathNavigation {
         // Circuit breaker pathfinding check
     }
 
-    @Unique
-    public static boolean canMobSearchPath(int entityId, long currentTick) {
+    private static boolean canMobSearchPath(int entityId, long currentTick) {
         PathfindingCircuitBreaker breaker = HyperionEngine.getInstance().getPathCircuitBreaker();
         if (breaker != null && breaker.isEnabled()) {
             return breaker.canEntitySearchPath(entityId, currentTick);
@@ -25,8 +23,7 @@ public class MixinPathNavigation {
         return true;
     }
 
-    @Unique
-    public static void reportPathfindingOutcome(int entityId, boolean success, long currentTick) {
+    private static void reportPathfindingOutcome(int entityId, boolean success, long currentTick) {
         PathfindingCircuitBreaker breaker = HyperionEngine.getInstance().getPathCircuitBreaker();
         if (breaker != null && breaker.isEnabled()) {
             breaker.recordPathfindingResult(entityId, success, currentTick);

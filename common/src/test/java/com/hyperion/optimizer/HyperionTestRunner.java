@@ -45,8 +45,8 @@ import com.hyperion.optimizer.core.gpu.amd.AmdVramBudgetGuard;
 import com.hyperion.optimizer.core.gpu.dualgpu.DualGpuManager;
 import com.hyperion.optimizer.core.gpu.dualgpu.DualGpuWorkloadDispatcher;
 import com.hyperion.optimizer.core.gpu.dualgpu.GpuDeviceInfo;
-import com.hyperion.optimizer.mixin.MixinLevelRenderer;
-import com.hyperion.optimizer.mixin.MixinVideoOptionsScreen;
+import com.hyperion.optimizer.mixin.HyperionMixinBridge;
+
 import com.hyperion.optimizer.core.render.ColorCorrectionEngine;
 import com.hyperion.optimizer.core.render.FpsStabilizerEngine;
 import com.hyperion.optimizer.core.render.ChunkLodManager;
@@ -69,7 +69,7 @@ import com.hyperion.optimizer.core.particle.AdvancedParticleEngine;
 import com.hyperion.optimizer.core.micro.BadOptimizationsEngine;
 import com.hyperion.optimizer.core.ai.MobAiOptimizer;
 import com.hyperion.optimizer.core.animation.PalladiumCapabilityCache;
-import com.hyperion.optimizer.mixin.MixinLightmapTexture;
+
 import com.hyperion.optimizer.core.threading.HyperionThreadPoolManager;
 import com.hyperion.optimizer.core.threading.ParallelChunkMesher;
 import com.hyperion.optimizer.core.threading.MultiCoreEntityPhysicsEngine;
@@ -2688,13 +2688,13 @@ public class HyperionTestRunner {
         }
 
         // Test Mixin Video Options Hook
-        MixinVideoOptionsScreen.onInitVideoOptionsScreen();
-        if (MixinVideoOptionsScreen.getActiveModel() == null) {
+        HyperionMixinBridge.onInitVideoOptionsScreen();
+        if (HyperionMixinBridge.getActiveModel() == null) {
             throw new AssertionError("Active model in MixinVideoOptionsScreen must not be null");
         }
 
         // Test Mixin Level Renderer Frustum Hook
-        boolean visible = MixinLevelRenderer.shouldRenderChunkSection(-0.5f, -0.5f, -0.5f, 0.5f, 0.5f, 0.5f);
+        boolean visible = HyperionMixinBridge.shouldRenderChunkSection(-0.5f, -0.5f, -0.5f, 0.5f, 0.5f, 0.5f);
         if (!visible) {
             throw new AssertionError("Centered chunk section should be visible in mixin hook");
         }
@@ -2949,7 +2949,7 @@ public class HyperionTestRunner {
         }
 
         // Test Mixin hook
-        MixinLightmapTexture.onProcessLightmap(lightmap, 16, 16, 1.0f);
+        HyperionMixinBridge.onProcessLightmap(lightmap, 16, 16, 1.0f);
     }
 
     private static void testFpsStabilizerChunkUploadPacingAndWorkBudgeting() {
@@ -3008,8 +3008,8 @@ public class HyperionTestRunner {
         }
 
         // MixinLevelRenderer hook check
-        MixinLevelRenderer.onRenderFrameStart();
-        if (!MixinLevelRenderer.shouldUploadChunkMesh()) {
+        HyperionMixinBridge.onRenderFrameStart();
+        if (!HyperionMixinBridge.shouldUploadChunkMesh()) {
             throw new AssertionError("MixinLevelRenderer should allow first chunk upload");
         }
     }
@@ -4483,11 +4483,11 @@ public class HyperionTestRunner {
         }
 
         // 5. Test MixinKeyboard integration
-        boolean mixinTriggered = com.hyperion.optimizer.mixin.MixinKeyboard.onKey(0L, HyperionKeyBindingManager.GLFW_KEY_RIGHT_CONTROL, 0, 1, 0);
+        boolean mixinTriggered = HyperionMixinBridge.onKey(0L, HyperionKeyBindingManager.GLFW_KEY_RIGHT_CONTROL, 0, 1, 0);
         if (!mixinTriggered || !manager.consumeOpenScreenRequest()) {
             throw new AssertionError("MixinKeyboard must intercept Right Control key");
         }
-        if (!com.hyperion.optimizer.mixin.MixinKeyboard.shouldInterceptKey(HyperionKeyBindingManager.GLFW_KEY_RIGHT_CONTROL, 1)) {
+        if (!HyperionMixinBridge.shouldInterceptKey(HyperionKeyBindingManager.GLFW_KEY_RIGHT_CONTROL, 1)) {
             throw new AssertionError("MixinKeyboard.shouldInterceptKey must return true for Right Control");
         }
     }
@@ -4760,9 +4760,9 @@ public class HyperionTestRunner {
         }
 
         // 3. Mixin Hooks for Texture Pack & Biome Colors
-        MixinLightmapTexture.onProcessTexture(pixels, 4, 4);
-        MixinLightmapTexture.onProcessTextureAbgr(pixels, 4, 4);
-        int mixinBiomeColor = MixinLightmapTexture.onGradeBiomeColor(rawGrass32);
+        HyperionMixinBridge.onProcessTexture(pixels, 4, 4);
+        HyperionMixinBridge.onProcessTextureAbgr(pixels, 4, 4);
+        int mixinBiomeColor = HyperionMixinBridge.onGradeBiomeColor(rawGrass32);
         if (((mixinBiomeColor >> 24) & 0xFF) != 0xFF) {
             throw new AssertionError("Mixin onGradeBiomeColor must return valid graded color");
         }
@@ -4842,7 +4842,7 @@ public class HyperionTestRunner {
         }
 
         // 2. Video Options Screen Injected Button Action
-        MixinVideoOptionsScreen.openHyperionSettings();
+        HyperionMixinBridge.openHyperionSettings();
 
         // 3. Screen Model Verification
         HyperionScreenModel model = new HyperionScreenModel();

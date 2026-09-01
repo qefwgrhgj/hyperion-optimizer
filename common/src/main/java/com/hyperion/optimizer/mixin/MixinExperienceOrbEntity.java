@@ -1,7 +1,6 @@
 package com.hyperion.optimizer.mixin;
 
 import org.spongepowered.asm.mixin.Mixin;
-import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
@@ -19,8 +18,7 @@ public class MixinExperienceOrbEntity {
         }
     }
 
-    @Unique
-    public static boolean shouldMergeOrbs(
+    private static boolean shouldMergeOrbs(
             double x1, double y1, double z1, int value1,
             double x2, double y2, double z2, int value2) {
         ExperienceOrbMerger merger = HyperionEngine.getInstance().getXpMerger();
@@ -30,8 +28,7 @@ public class MixinExperienceOrbEntity {
         return false;
     }
 
-    @Unique
-    public static int calculateMergedAge(int age1, int age2) {
+    private static int calculateMergedAge(int age1, int age2) {
         ExperienceOrbMerger merger = HyperionEngine.getInstance().getXpMerger();
         if (merger != null) {
             return merger.calculateMergedAge(age1, age2);

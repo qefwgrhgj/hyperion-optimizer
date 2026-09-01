@@ -15,7 +15,7 @@ public class MixinExplosion {
         // Fast raycast accelerated explosion
     }
 
-    public static FastExplosionEngine.ExplosionResult calculateFastExplosion(
+    private static FastExplosionEngine.ExplosionResult calculateFastExplosion(
             double x, double y, double z,
             float power,
             FastExplosionEngine.ExplosionType type,

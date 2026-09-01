@@ -1,7 +1,6 @@
 package com.hyperion.optimizer.mixin;
 
 import org.spongepowered.asm.mixin.Mixin;
-import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
@@ -16,7 +15,7 @@ public class MixinRedstoneWireBlock {
         // Topological 1-pass redstone acceleration
     }
 
-    public static FastRedstoneEngine.NetworkSolveResult updateWireNetwork(
+    private static FastRedstoneEngine.NetworkSolveResult updateWireNetwork(
             java.util.List<FastRedstoneEngine.WireNode> networkNodes,
             java.util.List<FastRedstoneEngine.WireNode> powerSources) {
         FastRedstoneEngine engine = HyperionEngine.getInstance().getRedstoneEngine();
@@ -26,8 +25,7 @@ public class MixinRedstoneWireBlock {
         return null;
     }
 
-    @Unique
-    public static boolean shouldSuppressRedstoneLight() {
+    private static boolean shouldSuppressRedstoneLight() {
         FastRedstoneEngine engine = HyperionEngine.getInstance().getRedstoneEngine();
         return engine != null && engine.isLightSuppressionEnabled();
     }

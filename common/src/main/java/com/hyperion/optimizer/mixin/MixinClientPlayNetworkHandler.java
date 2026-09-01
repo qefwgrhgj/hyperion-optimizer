@@ -3,7 +3,6 @@ package com.hyperion.optimizer.mixin;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import org.spongepowered.asm.mixin.Mixin;
-import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
@@ -19,8 +18,7 @@ public class MixinClientPlayNetworkHandler {
         onPlayerRespawn();
     }
 
-    @Unique
-    public static boolean recordPacket(Object channelKey, int maxBatchSize) {
+    private static boolean recordPacket(Object channelKey, int maxBatchSize) {
         PacketFlushConsolidator consolidator = HyperionEngine.getInstance().getNetworkConsolidator();
         if (consolidator != null && consolidator.isEnabled()) {
             consolidator.incrementPending(channelKey);
@@ -29,8 +27,7 @@ public class MixinClientPlayNetworkHandler {
         return false;
     }
 
-    @Unique
-    public static void onPlayerRespawn() {
+    private static void onPlayerRespawn() {
         HyperionEngine.getInstance().onPlayerRespawnOrTeleport();
     }
 }
