@@ -3,6 +3,7 @@ package com.hyperion.optimizer.mixin;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
@@ -19,6 +20,7 @@ public class MixinLivingEntityRenderer {
         // Living entity depth culling & animation LOD
     }
 
+    @Unique
     public static boolean shouldCullEntity(
             double camX, double camY, double camZ,
             double entityX, double entityY, double entityZ,
@@ -32,6 +34,7 @@ public class MixinLivingEntityRenderer {
         return false;
     }
 
+    @Unique
     public static boolean shouldSkipAnimation(
             double camX, double camY, double camZ,
             double entityX, double entityY, double entityZ,

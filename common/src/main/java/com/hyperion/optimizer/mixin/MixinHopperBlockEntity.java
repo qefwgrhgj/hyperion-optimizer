@@ -1,6 +1,7 @@
 package com.hyperion.optimizer.mixin;
 
 import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
@@ -18,6 +19,7 @@ public class MixinHopperBlockEntity {
         }
     }
 
+    @Unique
     public static boolean isHopperSleeping(long packedPos, long currentTick) {
         SleepingHopperManager manager = HyperionEngine.getInstance().getHopperManager();
         if (manager != null && manager.isEnabled()) {
@@ -26,6 +28,7 @@ public class MixinHopperBlockEntity {
         return false;
     }
 
+    @Unique
     public static void putHopperToSleep(long packedPos, long currentTick, int sleepDurationTicks) {
         SleepingHopperManager manager = HyperionEngine.getInstance().getHopperManager();
         if (manager != null && manager.isEnabled()) {

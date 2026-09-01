@@ -3,6 +3,7 @@ package com.hyperion.optimizer.mixin;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
@@ -27,6 +28,7 @@ public class MixinLevelRenderer {
         onFlushTerrainBatch();
     }
 
+    @Unique
     public static boolean shouldRenderChunkSection(float minX, float minY, float minZ, float maxX, float maxY, float maxZ) {
         ComputeCullEngine cullEngine = HyperionEngine.getInstance().getComputeCullEngine();
         if (cullEngine != null && cullEngine.isEnabled()) {
@@ -35,6 +37,7 @@ public class MixinLevelRenderer {
         return true;
     }
 
+    @Unique
     public static void onSetupTerrainFrustum(float[] projectionMatrix, float[] modelViewMatrix) {
         ComputeCullEngine cullEngine = HyperionEngine.getInstance().getComputeCullEngine();
         if (cullEngine != null && cullEngine.isEnabled()) {
@@ -42,6 +45,7 @@ public class MixinLevelRenderer {
         }
     }
 
+    @Unique
     public static void onRenderFrameStart() {
         com.hyperion.optimizer.core.render.FpsStabilizerEngine stabilizer = HyperionEngine.getInstance().getFpsStabilizer();
         if (stabilizer != null && stabilizer.isEnabled()) {
@@ -49,6 +53,7 @@ public class MixinLevelRenderer {
         }
     }
 
+    @Unique
     public static boolean shouldUploadChunkMesh() {
         com.hyperion.optimizer.core.render.FpsStabilizerEngine stabilizer = HyperionEngine.getInstance().getFpsStabilizer();
         if (stabilizer != null && stabilizer.isEnabled()) {
@@ -57,6 +62,7 @@ public class MixinLevelRenderer {
         return true;
     }
 
+    @Unique
     public static void onFlushTerrainBatch() {
         MultiDrawIndirectManager manager = HyperionEngine.getInstance().getMultiDrawManager();
         if (manager != null) {

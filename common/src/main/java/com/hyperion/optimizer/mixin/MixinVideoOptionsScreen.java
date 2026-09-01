@@ -3,6 +3,7 @@ package com.hyperion.optimizer.mixin;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
@@ -28,6 +29,7 @@ public class MixinVideoOptionsScreen {
         onInitVideoOptionsScreen();
     }
 
+    @Unique
     public static void onInitVideoOptionsScreen() {
         if (activeModel == null) {
             activeModel = new HyperionScreenModel();
@@ -35,6 +37,7 @@ public class MixinVideoOptionsScreen {
         System.out.println("[Hyperion] Injected '⚡ Hyperion Settings...' into Video Options Screen.");
     }
 
+    @Unique
     public static HyperionScreenModel getActiveModel() {
         if (activeModel == null) {
             activeModel = new HyperionScreenModel();
@@ -42,6 +45,7 @@ public class MixinVideoOptionsScreen {
         return activeModel;
     }
 
+    @Unique
     public static void openHyperionSettings() {
         com.hyperion.optimizer.gui.HyperionGuiLauncher.openConfigScreen();
     }

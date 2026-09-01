@@ -3,6 +3,7 @@ package com.hyperion.optimizer.mixin;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
@@ -23,6 +24,7 @@ public class MixinKeyboard {
         }
     }
 
+    @Unique
     public static boolean onKey(long window, int key, int scancode, int action, int modifiers) {
         HyperionKeyBindingManager manager = HyperionKeyBindingManager.getInstance();
         if (manager != null && manager.isEnabled()) {
@@ -31,6 +33,7 @@ public class MixinKeyboard {
         return false;
     }
 
+    @Unique
     public static boolean shouldInterceptKey(int key, int action) {
         if (action == 0) return false;
         HyperionKeyBindingManager manager = HyperionKeyBindingManager.getInstance();

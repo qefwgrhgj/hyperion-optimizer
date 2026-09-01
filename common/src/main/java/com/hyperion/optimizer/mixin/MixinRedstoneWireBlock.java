@@ -1,6 +1,7 @@
 package com.hyperion.optimizer.mixin;
 
 import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
@@ -25,6 +26,7 @@ public class MixinRedstoneWireBlock {
         return null;
     }
 
+    @Unique
     public static boolean shouldSuppressRedstoneLight() {
         FastRedstoneEngine engine = HyperionEngine.getInstance().getRedstoneEngine();
         return engine != null && engine.isLightSuppressionEnabled();

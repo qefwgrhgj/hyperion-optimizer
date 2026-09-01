@@ -3,6 +3,7 @@ package com.hyperion.optimizer.mixin;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
@@ -21,6 +22,7 @@ public class MixinParticleManager {
         }
     }
 
+    @Unique
     public static boolean canSpawnParticle(int blockX, int blockY, int blockZ, double cameraX, double cameraY, double cameraZ, long currentTick) {
         FastParticleEngine engine = HyperionEngine.getInstance().getParticleEngine();
         if (engine != null && engine.isEnabled()) {

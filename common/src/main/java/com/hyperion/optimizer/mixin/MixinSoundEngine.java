@@ -3,6 +3,7 @@ package com.hyperion.optimizer.mixin;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
@@ -18,6 +19,7 @@ public class MixinSoundEngine {
         // Offloaded async audio buffer evaluation
     }
 
+    @Unique
     public static void submitAsyncAudioTask(Runnable audioTask) {
         AsyncAudioEngine engine = HyperionEngine.getInstance().getAudioEngine();
         if (engine != null && engine.isEnabled()) {
