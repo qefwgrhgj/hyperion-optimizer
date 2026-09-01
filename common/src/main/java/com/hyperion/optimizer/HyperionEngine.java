@@ -77,7 +77,7 @@ public final class HyperionEngine {
     private com.hyperion.optimizer.core.gpu.GpuResetCrashGuard gpuCrashGuard;
     private com.hyperion.optimizer.gui.HyperionKeyBindingManager keyBindingManager;
 
-    // Voxel LOD Ultra-Distance Subsystems (Inspired by Voxy)
+    // Voxel LOD Ultra-Distance Subsystems (2048+ Chunks Horizon)
     private com.hyperion.optimizer.core.lod.voxel.VoxelHierarchicalMipTree voxelMipTree;
     private com.hyperion.optimizer.core.lod.voxel.VoxelSectionStorage voxelSectionStorage;
     private com.hyperion.optimizer.core.lod.voxel.VoxelLodRenderer voxelLodRenderer;
@@ -100,6 +100,7 @@ public final class HyperionEngine {
     private MultiCoreEntityPhysicsEngine multiCoreEntityPhysics;
     private AsyncWorldTickDispatcher asyncWorldTickDispatcher;
     private CpuCoreAffinityGovernor cpuAffinityGovernor;
+    private com.hyperion.optimizer.core.render.ShineStylizedEngine shineEngine;
 
     private HyperionEngine() {}
 
@@ -127,6 +128,21 @@ public final class HyperionEngine {
 
         LOGGER.info("[Hyperion] Initializing Sovereign Multi-Core Cross-Platform Optimizer Core...");
 
+        if (isDedicatedServer()) {
+            LOGGER.info("[Hyperion] Dedicated Server environment detected - disabling client-only rendering modules.");
+            config.enableGpuDrivenRenderer = false;
+            config.enableHiZOcclusionCulling = false;
+            config.enableDecoupledHud = false;
+            config.enableColorCorrection = false;
+            config.enableFpsStabilizer = false;
+            config.enableClientWorldCache = false;
+            config.enableAsyncAudio = false;
+            config.enableVoxelLodEngine = false;
+            config.enableGpuBlockInstancing = false;
+            config.enableChunkLod = false;
+            config.enableAggressiveFaceCulling = false;
+        }
+
         // 1. CPU Multi-Core Thread Pool Orchestrator
         this.threadPoolManager = HyperionThreadPoolManager.getInstance();
         this.threadPoolManager.reconfigurePools(
@@ -142,7 +158,7 @@ public final class HyperionEngine {
         // 2. Memory & Pool Initialization
         PrimitiveVectorPool.init();
 
-        // 3. Physics, Collision & AI (Lithium Core)
+        // 3. Physics, Collision & AI (Core Physics Engine)
         this.voxelCache = new VoxelShapeFastCache(config.enableVoxelCollisionFastCache);
         this.hopperManager = new SleepingHopperManager(config.enableSleepingHoppers);
         this.pathCircuitBreaker = new PathfindingCircuitBreaker(
@@ -178,7 +194,7 @@ public final class HyperionEngine {
             config.enableHudDynamicRefresh
         );
 
-        // 7. Hybrid Light Engine (Starlight + Phosphor)
+        // 7. Hybrid Light Engine (Async Bitset)
         this.lightEngine = new AsyncBitsetLightEngine(
             config.enableHybridLightEngine,
             config.lightWorkerThreads
@@ -192,10 +208,10 @@ public final class HyperionEngine {
         this.fpsStabilizer = new FpsStabilizerEngine(config.enableFpsStabilizer);
         this.fpsStabilizer.configure(config);
 
-        // 8. Network Consolidator (Krypton)
+        // 8. Network Consolidator
         this.networkConsolidator = new PacketFlushConsolidator(config.enablePacketFlushConsolidation);
 
-        // 9. World Cache Storage (Bobby)
+        // 9. World Cache Storage
         this.worldCacheStorage = new ClientWorldCacheStorage(config.enableClientWorldCache);
         this.fakeChunkManager = new FakeChunkManager(config.clientMaxViewDistance, this.worldCacheStorage);
 
@@ -273,6 +289,9 @@ public final class HyperionEngine {
         this.gpuCrashGuard.configure(config);
         this.keyBindingManager = com.hyperion.optimizer.gui.HyperionKeyBindingManager.getInstance();
         this.keyBindingManager.setEnabled(config.enableConfigMenuShortcut);
+        if (config.enableConfigMenuShortcut) {
+            this.keyBindingManager.startGlfwKeyPoller();
+        }
 
         // 15. Voxel LOD Ultra-Distance Horizon Engine (Voxy 2048+ Chunks)
         this.voxelMipTree = new com.hyperion.optimizer.core.lod.voxel.VoxelHierarchicalMipTree(config.enableVoxelLodEngine);
@@ -305,6 +324,10 @@ public final class HyperionEngine {
 
         // 20. Palladium Entity Capability & Animation Matrix Cache
         this.palladiumCache = new com.hyperion.optimizer.core.animation.PalladiumCapabilityCache(true);
+
+        // 21. Shine Stylized Visual Engine (Bloom, Colored Light, Rim Light, Cel-Shading)
+        this.shineEngine = com.hyperion.optimizer.core.render.ShineStylizedEngine.getInstance();
+        this.shineEngine.configure(config);
 
         this.initialized = true;
         LOGGER.info("[Hyperion] Optimizer Core Initialized with Multi-Core, GPU Voxel LOD (2048+), Particle Core, BadOptimizations & Mob AI.");
@@ -754,6 +777,27 @@ public final class HyperionEngine {
         if (voxelSectionStorage != null) {
             voxelSectionStorage.clear();
         }
+        if (shineEngine != null) {
+            shineEngine.configure(config);
+        }
         LOGGER.info("[Hyperion] Resource pack reload handled: Texture caches, lightmaps & sprite trackers safely invalidated.");
+    }
+
+    public com.hyperion.optimizer.core.render.ShineStylizedEngine getShineEngine() {
+        return shineEngine != null ? shineEngine : com.hyperion.optimizer.core.render.ShineStylizedEngine.getInstance();
+    }
+
+    public static boolean isDedicatedServer() {
+        try {
+            Class.forName("net.minecraft.client.Minecraft");
+            return false;
+        } catch (Throwable ignored) {
+            try {
+                Class.forName("net.minecraft.class_310");
+                return false;
+            } catch (Throwable ignored2) {
+                return true;
+            }
+        }
     }
 }

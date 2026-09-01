@@ -1,10 +1,32 @@
 package com.hyperion.optimizer.mixin;
 
+import net.fabricmc.api.EnvType;
+import net.fabricmc.api.Environment;
+import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.injection.At;
+import org.spongepowered.asm.mixin.injection.Inject;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
+
 import com.hyperion.optimizer.HyperionEngine;
 import com.hyperion.optimizer.core.gpu.ComputeCullEngine;
 import com.hyperion.optimizer.core.gpu.MultiDrawIndirectManager;
 
+@Mixin(targets = {
+    "net.minecraft.client.renderer.LevelRenderer",
+    "net.minecraft.client.renderer.WorldRenderer"
+})
+@Environment(EnvType.CLIENT)
 public class MixinLevelRenderer {
+    @Inject(method = "renderLevel", at = @At("HEAD"))
+    private void onRenderLevelStart(CallbackInfo ci) {
+        onRenderFrameStart();
+    }
+
+    @Inject(method = "renderLevel", at = @At("RETURN"))
+    private void onRenderLevelEnd(CallbackInfo ci) {
+        onFlushTerrainBatch();
+    }
+
     public static boolean shouldRenderChunkSection(float minX, float minY, float minZ, float maxX, float maxY, float maxZ) {
         ComputeCullEngine cullEngine = HyperionEngine.getInstance().getComputeCullEngine();
         if (cullEngine != null && cullEngine.isEnabled()) {

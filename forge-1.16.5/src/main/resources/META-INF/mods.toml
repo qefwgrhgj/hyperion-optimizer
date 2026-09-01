@@ -1,24 +1,31 @@
 modLoader="javafml"
 loaderVersion="[36,)"
-license="LGPL-3.0-only"
+license="MIT"
 
 [[mods]]
-modId="hyperion"
+modId="hyperion_optimizer"
 version="1.0.3"
 displayName="Hyperion Optimizer"
 description='''High-Performance Cross-Platform Minecraft Optimization Engine.'''
 authors="Hyperion Team"
+logoFile="icon.png"
+issueTrackerURL="https://github.com/qefwgrhgj/hyperion-optimizer/issues"
+displayURL="https://modrinth.com/mod/hyperion-optimizer"
 
-[[dependencies.hyperion]]
+[[dependencies.hyperion_optimizer]]
     modId="forge"
     mandatory=true
     versionRange="[36.2.0,)"
     ordering="NONE"
     side="BOTH"
 
-[[dependencies.hyperion]]
+[[dependencies.hyperion_optimizer]]
     modId="minecraft"
     mandatory=true
     versionRange="[1.16.5,1.17)"
     ordering="NONE"
     side="BOTH"
+
+
+[[mixins]]
+config = "hyperion.mixins.json"

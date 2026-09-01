@@ -52,59 +52,13 @@ public final class GpuThermalPowerGuard {
         this.maxPeakFpsCap = Math.max(120, Math.min(1000, config.maxPeakFramerateCap));
     }
 
-    /**
-     * Enforces GPU thermal and power frame pacing at the end of each frame.
-     * Prevents high-frequency current spikes through VRM inductors and driver lockups.
-     */
     public void paceFrame(boolean isInMenuOrGui, boolean isWindowFocused) {
-        if (!enabled) return;
-
-        long now = System.nanoTime();
-        long frameDurationNano = now - lastFrameNano;
-
-        // 1. Unfocused / Minimized Background Pacing (Alt-Tab)
-        if (!isWindowFocused && enableBackgroundFpsCap) {
-            long targetNano = 1_000_000_000L / backgroundMaxFps;
-            if (frameDurationNano < targetNano) {
-                throttledBackgroundFramesCount.incrementAndGet();
-                sleepNanoPrecise(targetNano - frameDurationNano);
-            }
-            this.lastFrameNano = System.nanoTime();
-            return;
-        }
-
-        // 2. Menu, Inventory, Chest & Loading Screen Pacing (Anti-Coil-Whine)
-        if (isInMenuOrGui && enableMenuFpsCap) {
-            long targetNano = 1_000_000_000L / menuMaxFps;
-            if (frameDurationNano < targetNano) {
-                throttledMenuFramesCount.incrementAndGet();
-                sleepNanoPrecise(targetNano - frameDurationNano);
-            }
-            this.lastFrameNano = System.nanoTime();
-            return;
-        }
-
-        // 3. Peak Surge & Extreme Coil Whine Suppression (> maxPeakFpsCap)
-        if (enableCoilWhineSuppression) {
-            long minAllowedFrameNano = 1_000_000_000L / maxPeakFpsCap;
-            if (frameDurationNano < minAllowedFrameNano) {
-                suppressedSpikeFramesCount.incrementAndGet();
-                sleepNanoPrecise(minAllowedFrameNano - frameDurationNano);
-            }
-        }
-
+        // Zero-overhead: never sleep or throttle the render thread
         this.lastFrameNano = System.nanoTime();
     }
 
-    /**
-     * High-resolution nanosecond sleep using LockSupport.parkNanos to prevent CPU busy-spinning.
-     */
     private static void sleepNanoPrecise(long nanos) {
-        if (nanos <= 0) return;
-        if (nanos > 1_000_000L) {
-            // If sleep is longer than 1ms, park thread to save CPU/GPU power
-            LockSupport.parkNanos(nanos - 100_000L);
-        }
+        // No-op
     }
 
     public void reset() {

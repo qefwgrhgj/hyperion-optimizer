@@ -1,10 +1,24 @@
 package com.hyperion.optimizer.mixin;
 
+import net.fabricmc.api.EnvType;
+import net.fabricmc.api.Environment;
+import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.injection.At;
+import org.spongepowered.asm.mixin.injection.Inject;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
+
 import com.hyperion.optimizer.HyperionEngine;
 import com.hyperion.optimizer.core.entity.AnimationLodManager;
 import com.hyperion.optimizer.core.entity.EntityDepthCuller;
 
+@Mixin(targets = "net.minecraft.client.renderer.entity.LivingEntityRenderer")
+@Environment(EnvType.CLIENT)
 public class MixinLivingEntityRenderer {
+    @Inject(method = "render", at = @At("HEAD"))
+    private void onRenderLivingEntity(CallbackInfo ci) {
+        // Living entity depth culling & animation LOD
+    }
+
     public static boolean shouldCullEntity(
             double camX, double camY, double camZ,
             double entityX, double entityY, double entityZ,

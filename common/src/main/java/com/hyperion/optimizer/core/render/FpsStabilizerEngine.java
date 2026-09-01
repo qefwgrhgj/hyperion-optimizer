@@ -70,26 +70,17 @@ public final class FpsStabilizerEngine {
      * If frame time is struggling beyond target budget, throttles down to 1 upload to protect frame pacing.
      */
     public int getDynamicChunkUploadLimit() {
-        if (!dynamicWorkBudgeting) return maxChunkUploadsPerFrame;
-        long targetBudget = 1_000_000_000L / Math.max(1, targetFps);
-        if (currentFrameTimeNano > targetBudget) {
-            return 1;
-        }
         return maxChunkUploadsPerFrame;
     }
 
     /**
      * Evaluates if a chunk section mesh can be uploaded to GPU in the current frame.
-     * Prevents dropping from 350 FPS to 60 FPS when entering loaded chunks (OptiFine Chunk Updates).
+     * Never throttles chunk uploads to prevent terrain load stutter.
      */
     public boolean canUploadChunkMeshThisFrame() {
         if (!enabled) return true;
-        long targetBudget = 1_000_000_000L / Math.max(1, targetFps);
-        if (dynamicWorkBudgeting && currentFrameTimeNano > targetBudget && chunkUploadsThisFrame >= 1) {
-            return false; // Throttled to 1 upload during heavy frame load
-        }
         if (chunkUploadsThisFrame >= maxChunkUploadsPerFrame) {
-            return false; // Defer remaining mesh uploads to next frame to preserve 350 FPS
+            return false;
         }
         chunkUploadsThisFrame++;
         return true;
@@ -117,13 +108,11 @@ public final class FpsStabilizerEngine {
     }
 
     /**
-     * Checks if non-critical background jobs (distant particles, audio raycasts) should throttle
-     * because render thread is exceeding its target frame budget.
+     * Checks if non-critical background jobs should throttle.
+     * Always returns false to avoid delaying background tasks.
      */
     public boolean shouldThrottleWorkload() {
-        if (!enabled || !dynamicWorkBudgeting) return false;
-        long targetBudgetNano = 1_000_000_000L / Math.max(1, targetFps);
-        return currentFrameTimeNano > (targetBudgetNano + 500_000L); // Over budget by >0.5ms
+        return false;
     }
 
     /**

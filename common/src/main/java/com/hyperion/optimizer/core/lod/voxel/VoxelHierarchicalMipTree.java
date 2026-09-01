@@ -5,7 +5,7 @@ import java.util.Arrays;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
- * 🌲 Voxel Hierarchical Mip Tree & Downsampling Engine (Inspired by Voxy).
+ * 🌲 Voxel Hierarchical Mip Tree & Downsampling Engine.
  *
  * Implements a hierarchical octree/mip-pyramid for voxel LOD rendering:
  * - Level 0: 1x1x1 blocks (Full 16x16x16 chunk section detail, 4096 voxels)

@@ -205,7 +205,7 @@ public class HyperionTestRunner {
 
         try {
             testPacketFlushConsolidatorPerChannelIsolation();
-            System.out.println("[PASS] 13. Packet Flush Per-Channel Context Isolation & Krypton Batching (P0-3)");
+            System.out.println("[PASS] 13. Packet Flush Per-Channel Context Isolation & Consolidated Batching (P0-3)");
             passed++;
         } catch (Throwable t) {
             System.err.println("[FAIL] 13. Packet Flush Channel Isolation: " + t.getMessage());
@@ -457,7 +457,7 @@ public class HyperionTestRunner {
 
         try {
             testSpatialCollisionEngineGridAndBrainStripping();
-            System.out.println("[PASS] 41. Spatial Grid Collision Hashing & AI Brain Stripping (Lithium)");
+            System.out.println("[PASS] 41. Spatial Grid Collision Hashing & AI Brain Stripping (Spatial Grid)");
             passed++;
         } catch (Throwable t) {
             System.err.println("[FAIL] 41. Spatial Collision Hashing: " + t.getMessage());
@@ -871,7 +871,7 @@ public class HyperionTestRunner {
 
         try {
             testVoxelHierarchicalMipTreeDownsampling();
-            System.out.println("[PASS] 87. Voxel Hierarchical Mip Tree & Distance Downsampling (Voxy 2048 Chunks)");
+            System.out.println("[PASS] 87. Voxel Hierarchical Mip Tree & Distance Downsampling (2048 Chunks)");
             passed++;
         } catch (Throwable t) {
             System.err.println("[FAIL] 87. Voxel Mip Tree: " + t.getMessage());
@@ -1301,9 +1301,18 @@ public class HyperionTestRunner {
             failed++;
         }
 
+        try {
+            testShineStylizedVisualEngineBloomAndColoredLighting();
+            System.out.println("[PASS] 135. Shine Stylized Visual Engine (Selective Bloom, Colored Light, Rim Light & Cel-Shading)");
+            passed++;
+        } catch (Throwable t) {
+            System.err.println("[FAIL] 135. Shine Stylized Engine: " + t.getMessage());
+            failed++;
+        }
+
         System.out.println("=================================================");
         System.out.println("SUMMARY: " + passed + " Passed, " + failed + " Failed.");
-        System.out.println("STATUS: " + (failed == 0 ? "[VERIFIED: ALL 134 ARCHITECTURAL, AUDIT, HD TEXTURE & COMPATIBILITY CONTRACTS VERIFIED]" : "[DEFECT DETECTED]"));
+        System.out.println("STATUS: " + (failed == 0 ? "[VERIFIED: ALL 135 ARCHITECTURAL, AUDIT, HD TEXTURE, SHINE & COMPATIBILITY CONTRACTS VERIFIED]" : "[DEFECT DETECTED]"));
         System.out.println("=================================================");
 
         if (failed > 0) {
@@ -4840,6 +4849,45 @@ public class HyperionTestRunner {
         model.setActiveCategory(HyperionCategory.GRAPHICS_SETTINGS);
         if (model.getCurrentOptions().isEmpty()) {
             throw new AssertionError("Graphics settings options list must not be empty");
+        }
+
+        // 4. Mod Menu Integration Verification
+        com.hyperion.optimizer.compat.HyperionModMenuCompat modMenuCompat = new com.hyperion.optimizer.compat.HyperionModMenuCompat();
+        com.terraformersmc.modmenu.api.ConfigScreenFactory<?> factory = modMenuCompat.getModConfigScreenFactory();
+        if (factory == null) {
+            throw new AssertionError("ModMenu ConfigScreenFactory must not be null");
+        }
+    }
+
+    private static void testShineStylizedVisualEngineBloomAndColoredLighting() {
+        com.hyperion.optimizer.core.render.ShineStylizedEngine engine = new com.hyperion.optimizer.core.render.ShineStylizedEngine();
+        engine.setBloomEnabled(true);
+        engine.setBloomIntensity(0.75);
+        engine.setColoredLightEnabled(true);
+
+        // 1. Emissive Bloom Extraction Verification
+        if (!engine.shouldExtractBloom(1.0f, 0.9f, 0.5f, 0.0f)) {
+            throw new AssertionError("Bright sunlight/torch pixel must pass bloom threshold");
+        }
+        if (engine.shouldExtractBloom(0.1f, 0.1f, 0.1f, 0.0f)) {
+            throw new AssertionError("Dark shadow pixel must not pass bloom threshold");
+        }
+        if (!engine.shouldExtractBloom(0.0f, 0.0f, 0.0f, 0.8f)) {
+            throw new AssertionError("Emissive block flag must trigger bloom extraction");
+        }
+
+        // 2. Colored Lighting Injection (Soul Torch Cyan vs Regular Torch Orange)
+        int torchColored = engine.applyColoredLighting(0xFFFFFFFF, 50, 1.0f);
+        int soulTorchColored = engine.applyColoredLighting(0xFFFFFFFF, 51, 1.0f);
+        if (torchColored == soulTorchColored) {
+            throw new AssertionError("Torch and Soul Torch must produce distinct colored lightmap tints");
+        }
+
+        // 3. Stylized Cel-Shading Quantization
+        engine.setStylizedShadingEnabled(true);
+        float stepped = engine.quantizeShading(0.68f);
+        if (stepped != 0.5f && stepped != 0.75f) {
+            throw new AssertionError("Cel-shading must quantize diffuse lighting into stepped toon bands");
         }
     }
 }

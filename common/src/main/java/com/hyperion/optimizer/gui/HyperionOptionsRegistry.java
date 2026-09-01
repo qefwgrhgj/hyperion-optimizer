@@ -195,7 +195,7 @@ public final class HyperionOptionsRegistry {
         ));
         register(HyperionOption.createBoolean(
             "enableVoxelLodEngine",
-            "Воксельный LOD рендеринг (Voxy 2048+ чанков)",
+            "Воксельный LOD рендеринг (2048+ чанков)",
             "Отрисовывает горизонт ландшафта до 2048+ чанков через облегченные воксельные пирамиды Mip-уровней",
             HyperionCategory.GRAPHICS_SETTINGS,
             c -> c.enableVoxelLodEngine,
@@ -512,7 +512,7 @@ public final class HyperionOptionsRegistry {
         // =========================================================================
         register(HyperionOption.createBoolean(
             "enableHybridLightEngine",
-            "Гибридный свет (Starlight + Phosphor)",
+            "Асинхронный 64-битный свет",
             "Асинхронный 64-битный расчет света в многопоточном пуле с L1/L2 кэшированием",
             HyperionCategory.WORLD_LIGHTING,
             c -> c.enableHybridLightEngine,
@@ -530,7 +530,7 @@ public final class HyperionOptionsRegistry {
         ));
         register(HyperionOption.createBoolean(
             "enableClientWorldCache",
-            "Дальний кэш мира (Bobby World Cache)",
+            "Локальный кэш дальнего мира",
             "Сохраняет чанки на клиенте для дальности прорисовки до 64+ чанков на серверах",
             HyperionCategory.WORLD_LIGHTING,
             c -> c.enableClientWorldCache,
@@ -592,7 +592,7 @@ public final class HyperionOptionsRegistry {
         ));
         register(HyperionOption.createBoolean(
             "enableExperienceOrbClumping",
-            "Слияние сфер опыта (Clumps)",
+            "Слияние сфер опыта",
             "Мгновенно объединяет сотни сфер опыта в один кластер",
             HyperionCategory.ENTITIES_ANIMATIONS,
             c -> c.enableExperienceOrbClumping,
@@ -614,7 +614,7 @@ public final class HyperionOptionsRegistry {
         // =========================================================================
         register(HyperionOption.createBoolean(
             "enablePacketFlushConsolidation",
-            "Консолидация сетевых пакетов (Krypton)",
+            "Консолидация сетевых пакетов",
             "Объединяет мелкие пакеты TCP для устранения микрофризов в мультиплеере",
             HyperionCategory.NETWORK_MEMORY_AUDIO,
             c -> c.enablePacketFlushConsolidation,
@@ -708,13 +708,176 @@ public final class HyperionOptionsRegistry {
             (c, v) -> c.colorNightAmbientBoost = v,
             0.12, 0.0, 0.50, 0.05
         ));
-        register(HyperionOption.createBoolean(
-            "enableColorDebanding",
-            "Устранение цветового бандинга (Debanding)",
-            "Сглаживает ступенчатые градиенты неба и темных пещер с помощью дизеринга",
+        register(HyperionOption.createIntSlider(
+            "colorTemperature",
+            "Цветовая температура (Кельвин)",
+            "Баланс белого: от теплого лампового (3500K) до холодного арктического (9000K)",
             HyperionCategory.COLOR_CORRECTION,
-            c -> c.enableColorDebanding,
-            (c, v) -> c.enableColorDebanding = v,
+            c -> c.colorTemperature,
+            (c, v) -> c.colorTemperature = v,
+            6500, 3000, 10000, 250
+        ));
+        register(HyperionOption.createBoolean(
+            "enableTexturePackColorCorrection",
+            "Цветокоррекция текстур-паков",
+            "Применение тонемаппинга и баланса белого напрямую к альфа-каналам кастомных текстур",
+            HyperionCategory.COLOR_CORRECTION,
+            c -> c.enableTexturePackColorCorrection,
+            (c, v) -> c.enableTexturePackColorCorrection = v,
+            false
+        ));
+
+        // =========================================================================
+        // 4. VOXEL LOD & INFINITE DISTANCE (Дальний рендер и Voxel LOD)
+        // =========================================================================
+        register(HyperionOption.createBoolean(
+            "enableVoxelLodEngine",
+            "Движок воксельного LOD (2048+)",
+            "Позволяет рендерить горизонт до 2048+ чанков без потери FPS через октарное воксельное сжатие",
+            HyperionCategory.VOXEL_LOD_INFINITE,
+            c -> c.enableVoxelLodEngine,
+            (c, v) -> c.enableVoxelLodEngine = v,
+            true
+        ));
+        register(HyperionOption.createIntSlider(
+            "voxelMaxRenderDistanceChunks",
+            "Максимальная дальность LOD (Чанки)",
+            "Предельная дистанция отрисовки воксельного горизонта",
+            HyperionCategory.VOXEL_LOD_INFINITE,
+            c -> c.voxelMaxRenderDistanceChunks,
+            (c, v) -> c.voxelMaxRenderDistanceChunks = v,
+            2048, 64, 4096, 64
+        ));
+        register(HyperionOption.createBoolean(
+            "enableVoxelHorizonBlending",
+            "Плавное смешивание горизонта",
+            "Сглаживает переход между реальными чанками и дальними LOD секциями",
+            HyperionCategory.VOXEL_LOD_INFINITE,
+            c -> c.enableVoxelHorizonBlending,
+            (c, v) -> c.enableVoxelHorizonBlending = v,
+            true
+        ));
+        register(HyperionOption.createDoubleSlider(
+            "voxelBlendStartChunks",
+            "Начало смешивания LOD (Чанки)",
+            "Расстояние, с которого начинается переход в упрощенный воксельный меш",
+            HyperionCategory.VOXEL_LOD_INFINITE,
+            c -> c.voxelBlendStartChunks,
+            (c, v) -> c.voxelBlendStartChunks = v,
+            12.0, 4.0, 32.0, 1.0
+        ));
+        register(HyperionOption.createDoubleSlider(
+            "voxelBlendEndChunks",
+            "Конец смешивания LOD (Чанки)",
+            "Расстояние полного перехода в воксельную структуру",
+            HyperionCategory.VOXEL_LOD_INFINITE,
+            c -> c.voxelBlendEndChunks,
+            (c, v) -> c.voxelBlendEndChunks = v,
+            24.0, 8.0, 64.0, 2.0
+        ));
+        register(HyperionOption.createBoolean(
+            "enableVoxelAtmosphericFog",
+            "Атмосферный туман горизонта",
+            "Физически корректный экспоненциальный туман для естественного погружения",
+            HyperionCategory.VOXEL_LOD_INFINITE,
+            c -> c.enableVoxelAtmosphericFog,
+            (c, v) -> c.enableVoxelAtmosphericFog = v,
+            true
+        ));
+        register(HyperionOption.createCycle(
+            "voxelStorageCompression",
+            "Метод сжатия вокселей в памяти",
+            "Алгоритм упаковки воксельных данных в ОЗУ (RLE, Fast LZ4)",
+            HyperionCategory.VOXEL_LOD_INFINITE,
+            c -> c.voxelStorageCompression,
+            (c, v) -> c.voxelStorageCompression = v,
+            new String[]{"RLE_PALETTE", "FAST_LZ4", "UNCOMPRESSED"},
+            new String[]{"RLE Палитра (Рекомендуется)", "Fast LZ4 Сжатие", "Без сжатия (Макс. скорость)"},
+            "RLE_PALETTE"
+        ));
+
+        // =========================================================================
+        // 10. ADVANCED TWEAKS (Тонкие системные твики)
+        // =========================================================================
+        register(HyperionOption.createBoolean(
+            "enableGpuResetCrashGuard",
+            "Защита от сбоев GPU (Crash Guard)",
+            "Перехват TDR и ошибок сброса драйвера видеокарты без вылета игры",
+            HyperionCategory.ADVANCED_TWEAKS,
+            c -> c.enableGpuResetCrashGuard,
+            (c, v) -> c.enableGpuResetCrashGuard = v,
+            true
+        ));
+        register(HyperionOption.createBoolean(
+            "enableGpuBlockInstancing",
+            "Аппаратный GPU-инстансинг блоков",
+            "Отрисовка одинаковых моделей блоков за один вызов Draw Instanced",
+            HyperionCategory.ADVANCED_TWEAKS,
+            c -> c.enableGpuBlockInstancing,
+            (c, v) -> c.enableGpuBlockInstancing = v,
+            true
+        ));
+        register(HyperionOption.createIntSlider(
+            "maxInstancesPerBatch",
+            "Размер батча инстансинга",
+            "Количество инстансов на один буфер",
+            HyperionCategory.ADVANCED_TWEAKS,
+            c -> c.maxInstancesPerBatch,
+            (c, v) -> c.maxInstancesPerBatch = v,
+            16384, 1024, 65536, 1024
+        ));
+        register(HyperionOption.createBoolean(
+            "enableAggressiveFaceCulling",
+            "Агрессивное отсечение граней",
+            "Удаление внутренних скрытых полигонов между соседними блоками",
+            HyperionCategory.ADVANCED_TWEAKS,
+            c -> c.enableAggressiveFaceCulling,
+            (c, v) -> c.enableAggressiveFaceCulling = v,
+            true
+        ));
+        register(HyperionOption.createBoolean(
+            "enableInternalCavityCulling",
+            "Отсечение полостей (Cavity Culling)",
+            "Не строит геометрию для изолированных воздушных карманов под землей",
+            HyperionCategory.ADVANCED_TWEAKS,
+            c -> c.enableInternalCavityCulling,
+            (c, v) -> c.enableInternalCavityCulling = v,
+            true
+        ));
+        register(HyperionOption.createBoolean(
+            "enableHdTextureOptimization",
+            "Оптимизация HD текстур-паков",
+            "Специальный конвейер сжатия и фильтрации для текстур 64x-512x",
+            HyperionCategory.ADVANCED_TWEAKS,
+            c -> c.enableHdTextureOptimization,
+            (c, v) -> c.enableHdTextureOptimization = v,
+            true
+        ));
+        register(HyperionOption.createBoolean(
+            "enableFastCloudEngine",
+            "Быстрый движок облаков (Fast Clouds)",
+            "Высокоскоростной рендеринг облаков с переиспользованием меша",
+            HyperionCategory.ADVANCED_TWEAKS,
+            c -> c.enableFastCloudEngine,
+            (c, v) -> c.enableFastCloudEngine = v,
+            true
+        ));
+        register(HyperionOption.createBoolean(
+            "enableSmartLeavesCulling",
+            "Умная листва (Smart Leaves)",
+            "Отсечение невидимой листвы внутри крон деревьев (+15-30% FPS в лесах)",
+            HyperionCategory.ADVANCED_TWEAKS,
+            c -> c.enableSmartLeavesCulling,
+            (c, v) -> c.enableSmartLeavesCulling = v,
+            true
+        ));
+        register(HyperionOption.createBoolean(
+            "enableFabulousGraphicsOptimization",
+            "Оптимизация Fabulous! графики",
+            "Ускорение послойной сортировки полупрозрачных слоев воды и стекла",
+            HyperionCategory.ADVANCED_TWEAKS,
+            c -> c.enableFabulousGraphicsOptimization,
+            (c, v) -> c.enableFabulousGraphicsOptimization = v,
             true
         ));
     }

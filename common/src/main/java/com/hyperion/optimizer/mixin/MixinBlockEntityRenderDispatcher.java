@@ -1,9 +1,23 @@
 package com.hyperion.optimizer.mixin;
 
+import net.fabricmc.api.EnvType;
+import net.fabricmc.api.Environment;
+import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.injection.At;
+import org.spongepowered.asm.mixin.injection.Inject;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
+
 import com.hyperion.optimizer.HyperionEngine;
 import com.hyperion.optimizer.core.entity.StaticChestMeshBaker;
 
+@Mixin(targets = "net.minecraft.client.renderer.blockentity.BlockEntityRenderDispatcher")
+@Environment(EnvType.CLIENT)
 public class MixinBlockEntityRenderDispatcher {
+    @Inject(method = "render", at = @At("HEAD"))
+    private void onRenderBlockEntity(CallbackInfo ci) {
+        // Fast block entity culling check
+    }
+
     public static boolean canBakeChestToStaticMesh(long packedPos) {
         StaticChestMeshBaker baker = HyperionEngine.getInstance().getChestBaker();
         if (baker != null && baker.isEnabled()) {

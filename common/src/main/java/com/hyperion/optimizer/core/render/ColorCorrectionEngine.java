@@ -32,8 +32,8 @@ public final class ColorCorrectionEngine {
     private volatile float vibrance = 1.00f;
     private volatile float saturation = 1.00f;
     private volatile float contrast = 1.00f;
-    private volatile float blackCrushCompensation = 0.12f;
-    private volatile float nightAmbientBoost = 0.12f;
+    private volatile float blackCrushCompensation = 0.30f;
+    private volatile float nightAmbientBoost = 0.20f;
     private volatile int colorTemperature = 6500;
     private volatile boolean debanding = true;
     private volatile boolean texturePackGradingEnabled = false;
@@ -161,16 +161,16 @@ public final class ColorCorrectionEngine {
 
         // 6. Anti-Black-Crush Toe Lift & Ambient Floor
         float lumCurrent = 0.2126f * r + 0.7152f * g + 0.0722f * b;
-        if (lumCurrent < 0.35f) {
-            float shadowToe = (0.35f - lumCurrent) / 0.35f;
-            float lift = (blackCrushCompensation * 0.15f) * (shadowToe * shadowToe);
+        if (lumCurrent < 0.40f) {
+            float shadowToe = (0.40f - lumCurrent) / 0.40f;
+            float lift = (blackCrushCompensation * 0.22f) * shadowToe;
             r += lift;
             g += lift;
             b += lift;
         }
 
-        // Safe Ambient Floor Guarantee: Prevent shadows from collapsing to pure black (0x000000)
-        float minAmbientFloor = 0.045f + (nightAmbientBoost * 0.06f * clamp01(nightFactor));
+        // Safe Ambient Floor Guarantee: Prevent shadows and caves from collapsing to pure black (0x000000)
+        float minAmbientFloor = 0.075f + (nightAmbientBoost * 0.08f * clamp01(nightFactor));
         r = Math.max(minAmbientFloor, r);
         g = Math.max(minAmbientFloor, g);
         b = Math.max(minAmbientFloor, b);

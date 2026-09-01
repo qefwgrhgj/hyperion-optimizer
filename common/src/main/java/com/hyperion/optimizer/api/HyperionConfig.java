@@ -5,27 +5,27 @@ public class HyperionConfig {
     public boolean enableGpuDrivenRenderer = true;
     public boolean enableHiZOcclusionCulling = true;
     public int maxGpuIndirectDrawBatchSize = 65536;
-    public boolean enableDecoupledHud = true;
+    public boolean enableDecoupledHud = false;
     public int hudTargetFramerate = 60;
     public boolean enableHudDynamicRefresh = true;
     public boolean enableFastParticleEngine = true;
     public int maxParticlesPerBlockPerSecond = 5;
     public double maxParticleDistance = 48.0;
     public boolean enableFpsStabilizer = true;
-    public int targetFramerate = 350;
-    public int maxChunkUploadsPerFrame = 3;
+    public int targetFramerate = 1000;
+    public int maxChunkUploadsPerFrame = 32;
     public boolean enableDynamicWorkBudgeting = true;
     public boolean enableAggressiveCaveCulling = true;
     public boolean enableBlockEntityDistanceCulling = true;
     public double blockEntityCullDistance = 32.0;
     public boolean enableColorCorrection = true;
     public String colorGradingMode = "NATURAL_BALANCED"; // VIBRANT_HDR, NIGHT_VISION_CLEAR, CINEMATIC_FILMIC, NATURAL_BALANCED, CUSTOM
-    public double colorGammaBoost = 1.00;
+    public double colorGammaBoost = 1.05;
     public double colorVibrance = 1.00;
     public double colorSaturation = 1.00;
     public double colorContrast = 1.00;
-    public double colorBlackCrushCompensation = 0.12;
-    public double colorNightAmbientBoost = 0.12;
+    public double colorBlackCrushCompensation = 0.30;
+    public double colorNightAmbientBoost = 0.20;
     public int colorTemperature = 6500;
     public boolean enableColorDebanding = true;
     public boolean enableTexturePackColorCorrection = false;
@@ -50,7 +50,7 @@ public class HyperionConfig {
     public boolean enableGpuBlockInstancing = true;
     public int maxInstancesPerBatch = 16384;
 
-    // Voxel LOD Ultra-Distance Engine (Voxy 2048+ Chunks Horizon)
+    // Voxel LOD Ultra-Distance Engine (2048+ Chunks Horizon)
     public boolean enableVoxelLodEngine = true;
     public int voxelMaxRenderDistanceChunks = 2048;
     public boolean enableVoxelHorizonBlending = true;
@@ -82,46 +82,46 @@ public class HyperionConfig {
     public boolean enableAmdPersistentCoherentBuffers = true;
     public boolean enableAmd2GbVramGuard = true;
     public boolean enableAmdUmaZeroCopy = true;
-    public boolean enableDualGpuSupport = true;
-    public String dualGpuMode = "AUTO_BALANCED"; // OFF, AUTO_BALANCED, DEDICATED_IGPU_HUD_LIGHT, CUSTOM
+    public boolean enableDualGpuSupport = false;
+    public String dualGpuMode = "OFF"; // OFF, AUTO_BALANCED, DEDICATED_IGPU_HUD_LIGHT, CUSTOM
     public int primaryGpuIndex = 0;
     public int secondaryGpuIndex = 1;
-    public boolean enableSecondaryGpuHudOffload = true;
-    public boolean enableSecondaryGpuLightOffload = true;
-    public boolean enableSecondaryGpuParticleOffload = true;
+    public boolean enableSecondaryGpuHudOffload = false;
+    public boolean enableSecondaryGpuLightOffload = false;
+    public boolean enableSecondaryGpuParticleOffload = false;
 
     // Multi-Vendor GPU Profiles (NVIDIA Optimus, Apple Silicon M-series, Intel Arc, AMD)
     public String gpuVendorProfile = "AUTO"; // AUTO, AMD_RADEON_HYBRID, NVIDIA_INTEL_OPTIMUS, APPLE_SILICON_M_SERIES, INTEL_ARC_DEDICATED, GENERIC_UNIVERSAL
 
     // Dual-GPU Desynchronization & Wait-Loop Suppressor (Sync Lock)
-    public boolean enableDualGpuSyncLock = true;
+    public boolean enableDualGpuSyncLock = false;
     public long dualGpuSyncTimeoutMs = 5;
 
     // Emergency Auto-Fallback on Thermal Throttling
-    public boolean enableDualGpuThermalFallback = true;
+    public boolean enableDualGpuThermalFallback = false;
     public double thermalFallbackFrametimeThresholdMs = 40.0;
 
     // GPU Reset & Driver TDR Crash Guard
     public boolean enableGpuResetCrashGuard = true;
 
-    // GUI Menu Global Shortcut (Ctrl + Shift + 0)
+    // GUI Menu Global Shortcut (Ctrl + Shift + 0, F8, Right Ctrl)
     public boolean enableConfigMenuShortcut = true;
 
     // GPU Thermal & Power Spike Guard (Anti-Coil-Whine)
-    public boolean enableGpuThermalPowerGuard = true;
-    public boolean enableMenuFpsCap = true;
+    public boolean enableGpuThermalPowerGuard = false;
+    public boolean enableMenuFpsCap = false;
     public int menuMaxFramerate = 60;
-    public boolean enableBackgroundFpsCap = true;
+    public boolean enableBackgroundFpsCap = false;
     public int backgroundMaxFramerate = 20;
-    public boolean enableCoilWhineSuppression = true;
-    public int maxPeakFramerateCap = 500;
+    public boolean enableCoilWhineSuppression = false;
+    public int maxPeakFramerateCap = 1000;
 
     // 3. Processor & Multithreading Settings (Настройки процессора)
     public boolean enableCpuMultithreading = true;
     public String cpuThreadAllocationMode = "AUTO_DETECT_CORES"; // AUTO_DETECT_CORES, ALL_CORES, BALANCED_N_MINUS_1, CUSTOM
     public int customCpuCoreCount = 8;
     public boolean enableParallelChunkMeshing = true;
-    public int parallelChunkMesherThreads = Math.max(2, (Runtime.getRuntime().availableProcessors() * 5) / 8);
+    public int parallelChunkMesherThreads = Math.max(1, Math.min(4, Runtime.getRuntime().availableProcessors() / 2));
     public boolean enableMultiCoreEntityPhysics = true;
     public int entityPhysicsBatchSize = 64;
     public boolean enableAsyncWorldTickDispatcher = true;
@@ -129,7 +129,7 @@ public class HyperionConfig {
     public boolean enableThreadPriorityBoost = true;
     public boolean enableSimdVectorAcceleration = true;
 
-    // Physics, Collision & Redstone (Lithium Subsystem)
+    // Physics, Collision & Redstone (High-Performance Physics Subsystem)
     public boolean enableVoxelCollisionFastCache = true;
     public boolean enableSleepingHoppers = true;
     public boolean enablePathfindingCircuitBreaker = true;

@@ -33,7 +33,7 @@ public class AsyncBitsetLightEngine {
                         return t;
                     }
                 },
-                new ThreadPoolExecutor.DiscardOldestPolicy() // Discard stale redundant light passes if overloaded
+                new ThreadPoolExecutor.CallerRunsPolicy() // Execute synchronously if queue is full (never drop light updates)
             );
         } else {
             this.lightWorkerPool = null;

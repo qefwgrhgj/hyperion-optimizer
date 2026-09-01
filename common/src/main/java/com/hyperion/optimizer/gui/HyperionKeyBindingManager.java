@@ -18,6 +18,8 @@ public final class HyperionKeyBindingManager {
     public static final int GLFW_KEY_0 = 48;
     public static final int GLFW_KEY_H = 72;
     public static final int GLFW_KEY_O = 79;
+    public static final int GLFW_KEY_F8 = 297;
+    public static final int GLFW_KEY_F10 = 299;
 
     // GLFW Modifiers
     public static final int GLFW_MOD_SHIFT = 0x0001;
@@ -31,7 +33,7 @@ public final class HyperionKeyBindingManager {
     private final AtomicBoolean pollerStarted = new AtomicBoolean(false);
 
     private HyperionKeyBindingManager() {
-        startGlfwKeyPoller();
+        // Do not eagerly invoke GLFW methods during early initialization
     }
 
     public static HyperionKeyBindingManager getInstance() {
@@ -42,33 +44,111 @@ public final class HyperionKeyBindingManager {
         this.screenOpener = opener;
     }
 
+    private volatile long cachedWindowHandle = 0L;
+
+    public void setWindowHandle(long handle) {
+        if (handle != 0L) {
+            this.cachedWindowHandle = handle;
+        }
+    }
+
+    public static long findMinecraftWindowHandle() {
+        String[] classNames = {
+            "net.minecraft.client.MinecraftClient",
+            "net.minecraft.client.Minecraft",
+            "net.minecraft.class_310"
+        };
+        for (String cName : classNames) {
+            try {
+                Class<?> mcClass = Class.forName(cName);
+                Object mcInstance = null;
+                for (String mName : new String[]{"getInstance", "method_1551", "func_71410_x"}) {
+                    try {
+                        mcInstance = mcClass.getMethod(mName).invoke(null);
+                        if (mcInstance != null) break;
+                    } catch (Throwable ignored) {}
+                }
+                if (mcInstance == null) continue;
+
+                // Find window object from fields/methods
+                Object windowObj = null;
+                for (String mName : new String[]{"getWindow", "method_22683", "func_228018_a_"}) {
+                    try {
+                        windowObj = mcClass.getMethod(mName).invoke(mcInstance);
+                        if (windowObj != null) break;
+                    } catch (Throwable ignored) {}
+                }
+                if (windowObj == null) {
+                    for (java.lang.reflect.Field f : mcClass.getDeclaredFields()) {
+                        f.setAccessible(true);
+                        Object val = f.get(mcInstance);
+                        if (val != null && (val.getClass().getSimpleName().contains("Window") || val.getClass().getName().contains("class_1041"))) {
+                            windowObj = val;
+                            break;
+                        }
+                    }
+                }
+                if (windowObj == null) continue;
+
+                // Extract window handle (long)
+                for (String mName : new String[]{"getHandle", "handle", "method_4490", "func_227976_a_"}) {
+                    try {
+                        Object h = windowObj.getClass().getMethod(mName).invoke(windowObj);
+                        if (h instanceof Long && (Long) h != 0L) {
+                            return (Long) h;
+                        }
+                    } catch (Throwable ignored) {}
+                }
+                for (java.lang.reflect.Field f : windowObj.getClass().getDeclaredFields()) {
+                    if (f.getType() == long.class) {
+                        f.setAccessible(true);
+                        long h = f.getLong(windowObj);
+                        if (h != 0L) return h;
+                    }
+                }
+            } catch (Throwable ignored) {}
+        }
+        return 0L;
+    }
+
     public void startGlfwKeyPoller() {
         if (!pollerStarted.compareAndSet(false, true)) return;
         Thread t = new Thread(() -> {
             try {
+                // Sleep 2.5 seconds to guarantee Minecraft Blaze3D has initialized GLFW and window
+                Thread.sleep(2500);
                 Class<?> glfwClass = Class.forName("org.lwjgl.glfw.GLFW");
-                java.lang.reflect.Method getCurrentContextMethod = glfwClass.getMethod("glfwGetCurrentContext");
                 java.lang.reflect.Method getKeyMethod = glfwClass.getMethod("glfwGetKey", long.class, int.class);
 
                 boolean wasPressed = false;
                 while (enabled) {
                     try {
-                        Thread.sleep(60); // 16 Hz check (~0.0001% CPU)
-                        long window = (long) getCurrentContextMethod.invoke(null);
-                        if (window != 0) {
+                        Thread.sleep(50); // 20 Hz check (~0.0001% CPU)
+                        long window = cachedWindowHandle;
+                        if (window == 0L) {
+                            window = findMinecraftWindowHandle();
+                            if (window != 0L) {
+                                cachedWindowHandle = window;
+                            }
+                        }
+                        if (window != 0L) {
                             int stateRctrl = (int) getKeyMethod.invoke(null, window, GLFW_KEY_RIGHT_CONTROL);
                             int state0 = (int) getKeyMethod.invoke(null, window, GLFW_KEY_0);
                             int stateH = (int) getKeyMethod.invoke(null, window, GLFW_KEY_H);
                             int stateLctrl = (int) getKeyMethod.invoke(null, window, GLFW_KEY_LEFT_CONTROL);
                             int stateLshift = (int) getKeyMethod.invoke(null, window, 340); // GLFW_KEY_LEFT_SHIFT
+                            int stateF8 = (int) getKeyMethod.invoke(null, window, GLFW_KEY_F8);
+                            int stateF10 = (int) getKeyMethod.invoke(null, window, GLFW_KEY_F10);
+                            int stateRshift = (int) getKeyMethod.invoke(null, window, 344); // GLFW_KEY_RIGHT_SHIFT
 
                             boolean isRctrl = (stateRctrl == 1);
                             boolean isCombo = ((state0 == 1 || stateH == 1) && (stateLctrl == 1 || stateLshift == 1));
+                            boolean isFunctionKey = (stateF8 == 1 || stateF10 == 1 || stateRshift == 1);
 
-                            if ((isRctrl || isCombo) && !wasPressed) {
+                            if ((isRctrl || isCombo || isFunctionKey) && !wasPressed) {
                                 wasPressed = true;
                                 triggerOpenScreen();
-                            } else if (!isRctrl && !isCombo) {
+                            } else if (!isRctrl && !isCombo && !isFunctionKey) {
                                 wasPressed = false;
                             }
                         }

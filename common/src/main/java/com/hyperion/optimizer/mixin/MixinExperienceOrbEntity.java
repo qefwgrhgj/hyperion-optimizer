@@ -1,9 +1,23 @@
 package com.hyperion.optimizer.mixin;
 
+import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.injection.At;
+import org.spongepowered.asm.mixin.injection.Inject;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
+
 import com.hyperion.optimizer.HyperionEngine;
 import com.hyperion.optimizer.core.entity.ExperienceOrbMerger;
 
+@Mixin(targets = "net.minecraft.world.entity.ExperienceOrb")
 public class MixinExperienceOrbEntity {
+    @Inject(method = "tick", at = @At("HEAD"))
+    private void onTick(CallbackInfo ci) {
+        ExperienceOrbMerger merger = HyperionEngine.getInstance().getXpMerger();
+        if (merger != null && merger.isEnabled()) {
+            // Evaluated during entity tick
+        }
+    }
+
     public static boolean shouldMergeOrbs(
             double x1, double y1, double z1, int value1,
             double x2, double y2, double z2, int value2) {

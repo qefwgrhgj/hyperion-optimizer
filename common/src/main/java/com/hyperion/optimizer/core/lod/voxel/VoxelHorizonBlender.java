@@ -3,9 +3,9 @@ package com.hyperion.optimizer.core.lod.voxel;
 import com.hyperion.optimizer.api.HyperionConfig;
 
 /**
- * 🌅 Voxel Horizon Blender & Atmospheric Distance Fog Integrator (Inspired by Voxy).
+ * 🌅 Voxel Horizon Blender & Atmospheric Distance Fog Integrator.
  *
- * Implements smooth visual blending between close-range vanilla/Sodium full-detail chunks
+ * Implements smooth visual blending between close-range near-distance full-detail chunks
  * and far-distance voxel LOD terrain out to 2048+ chunks.
  *
  * Prevents harsh render distance edges, popping chunk borders, and color mismatches
@@ -37,7 +37,7 @@ public final class VoxelHorizonBlender {
      */
     public float calculateLodBlendFactor(double distanceChunks) {
         if (!enabled || distanceChunks <= blendStartDistanceChunks) {
-            return 0.0f; // Pure vanilla/Sodium terrain
+            return 0.0f; // Pure near-distance terrain
         }
         if (distanceChunks >= blendEndDistanceChunks) {
             return 1.0f; // Pure voxel LOD

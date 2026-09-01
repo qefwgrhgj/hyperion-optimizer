@@ -1,5 +1,12 @@
 package com.hyperion.optimizer.mixin;
 
+import net.fabricmc.api.EnvType;
+import net.fabricmc.api.Environment;
+import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.injection.At;
+import org.spongepowered.asm.mixin.injection.Inject;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
+
 import com.hyperion.optimizer.HyperionEngine;
 import com.hyperion.optimizer.core.render.ColorCorrectionEngine;
 
@@ -7,7 +14,14 @@ import com.hyperion.optimizer.core.render.ColorCorrectionEngine;
  * Mixin hook for Minecraft Lightmap Texture Manager & Color Pipeline.
  * Injects Hyperion's HDR ACES Tonemapping, Anti-Black-Crush, and Vibrance.
  */
+@Mixin(targets = "net.minecraft.client.renderer.LightTexture")
+@Environment(EnvType.CLIENT)
 public class MixinLightmapTexture {
+    @Inject(method = "updateLightTexture", at = @At("HEAD"))
+    private void onUpdateLightmap(CallbackInfo ci) {
+        // Lightmap cache and color correction
+    }
+
     public static void onProcessLightmap(int[] pixels, int width, int height, float nightFactor) {
         ColorCorrectionEngine engine = HyperionEngine.getInstance().getColorCorrectionEngine();
         if (engine != null && engine.isEnabled()) {

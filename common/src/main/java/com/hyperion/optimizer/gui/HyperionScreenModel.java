@@ -174,8 +174,38 @@ public final class HyperionScreenModel {
         dst.clientMaxViewDistance = src.clientMaxViewDistance;
         dst.autoCleanOldWorldCache = src.autoCleanOldWorldCache;
         dst.enableZeroAllocMathPooling = src.enableZeroAllocMathPooling;
-        dst.enableBlockStateDeduplication = src.enableBlockStateDeduplication;
         dst.enableAsyncAudio = src.enableAsyncAudio;
         dst.maxSimultaneousSoundChannels = src.maxSimultaneousSoundChannels;
+
+        // Voxel LOD Ultra-Distance
+        dst.enableVoxelLodEngine = src.enableVoxelLodEngine;
+        dst.voxelMaxRenderDistanceChunks = src.voxelMaxRenderDistanceChunks;
+        dst.enableVoxelHorizonBlending = src.enableVoxelHorizonBlending;
+        dst.voxelBlendStartChunks = src.voxelBlendStartChunks;
+        dst.voxelBlendEndChunks = src.voxelBlendEndChunks;
+        dst.enableVoxelAtmosphericFog = src.enableVoxelAtmosphericFog;
+        dst.voxelStorageCompression = src.voxelStorageCompression;
+
+        // Advanced Mesh & Geometry Tweaks
+        dst.enableChunkLod = src.enableChunkLod;
+        dst.chunkLodDistanceBlocks = src.chunkLodDistanceBlocks;
+        dst.chunkLodFarDistanceBlocks = src.chunkLodFarDistanceBlocks;
+        dst.chunkLodSimplificationFactor = src.chunkLodSimplificationFactor;
+        dst.enableAggressiveFaceCulling = src.enableAggressiveFaceCulling;
+        dst.enableInternalCavityCulling = src.enableInternalCavityCulling;
+        dst.enableGpuBlockInstancing = src.enableGpuBlockInstancing;
+        dst.maxInstancesPerBatch = src.maxInstancesPerBatch;
+        dst.enableGpuResetCrashGuard = src.enableGpuResetCrashGuard;
+        dst.enableHdTextureOptimization = src.enableHdTextureOptimization;
+        dst.enableAsyncAnimatedTextures = src.enableAsyncAnimatedTextures;
+        dst.enableAdaptiveMipmapPacing = src.enableAdaptiveMipmapPacing;
+        dst.maxHdAtlasDimension = src.maxHdAtlasDimension;
+        dst.enableSmartLeavesCulling = src.enableSmartLeavesCulling;
+        dst.enableFabulousGraphicsOptimization = src.enableFabulousGraphicsOptimization;
+        dst.enableTranslucentSortThrottling = src.enableTranslucentSortThrottling;
+        dst.enableFastCloudEngine = src.enableFastCloudEngine;
+        dst.enableCloudCulling = src.enableCloudCulling;
+        dst.enableCloudMeshReuse = src.enableCloudMeshReuse;
+        dst.enableTexturePackColorCorrection = src.enableTexturePackColorCorrection;
     }
 }

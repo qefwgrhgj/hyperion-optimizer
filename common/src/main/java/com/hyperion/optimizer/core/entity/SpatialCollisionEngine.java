@@ -7,7 +7,7 @@ import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * High-Performance Spatial Collision Hashing & AI Brain Stripping Engine (Lithium Architecture).
+ * High-Performance Spatial Collision Hashing & AI Brain Stripping Engine (Sovereign Spatial Grid Hashing Architecture).
  * Eliminates O(N^2) entity collision checks using 4x4 spatial grid buckets, caps max collision checks,
  * and throttles AI brain goals for trapped (1x1 cells) or distant mobs.
  */

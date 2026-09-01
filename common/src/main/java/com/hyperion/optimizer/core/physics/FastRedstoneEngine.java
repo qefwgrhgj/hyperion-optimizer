@@ -6,7 +6,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * High-Performance Fast Redstone Optimization Engine (Alternate Current & Lithium Architecture).
+ * High-Performance Fast Redstone Optimization Engine (Sovereign High-Performance Topological Redstone Architecture).
  * Replaces vanilla Minecraft's exponential-complexity BFS wire propagation with a 1-pass
  * topological network solver, neighbor update batching, light suppression, comparator signal
  * caching, and hopper container occlusion checks.

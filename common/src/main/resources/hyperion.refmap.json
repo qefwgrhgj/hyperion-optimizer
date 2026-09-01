@@ -1,0 +1,145 @@
+{
+  "mappings": {
+    "com/hyperion/optimizer/mixin/MixinKeyboard": {
+      "keyPress": "Lnet/minecraft/client/KeyboardHandler;keyPress(JIIII)V"
+    },
+    "com/hyperion/optimizer/mixin/MixinInGameHud": {
+      "render": "Lnet/minecraft/client/gui/Gui;render(Lnet/minecraft/client/gui/GuiGraphics;Lnet/minecraft/client/DeltaTracker;)V"
+    },
+    "com/hyperion/optimizer/mixin/MixinLevelRenderer": {
+      "renderLevel": "Lnet/minecraft/client/renderer/LevelRenderer;renderLevel(Lnet/minecraft/client/DeltaTracker;ZLnet/minecraft/client/Camera;Lnet/minecraft/client/renderer/GameRenderer;Lnet/minecraft/client/renderer/LightTexture;Lorg/joml/Matrix4f;Lorg/joml/Matrix4f;)V"
+    },
+    "com/hyperion/optimizer/mixin/MixinExperienceOrbEntity": {
+      "tick": "Lnet/minecraft/world/entity/ExperienceOrb;tick()V"
+    },
+    "com/hyperion/optimizer/mixin/MixinHopperBlockEntity": {
+      "pushAndPull": "Lnet/minecraft/world/level/block/entity/HopperBlockEntity;pushAndPull(Lnet/minecraft/world/level/Level;Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/level/block/state/BlockState;Lnet/minecraft/world/level/block/entity/HopperBlockEntity;Ljava/util/function/BooleanSupplier;)Z"
+    },
+    "com/hyperion/optimizer/mixin/MixinParticleManager": {
+      "render": "Lnet/minecraft/client/particle/ParticleEngine;render(Lnet/minecraft/client/Camera;FLnet/minecraft/client/renderer/culling/Frustum;)V"
+    },
+    "com/hyperion/optimizer/mixin/MixinVideoOptionsScreen": {
+      "init": "Lnet/minecraft/client/gui/screens/options/VideoSettingsScreen;init()V"
+    },
+    "com/hyperion/optimizer/mixin/MixinBlockEntityRenderDispatcher": {
+      "render": "Lnet/minecraft/client/renderer/blockentity/BlockEntityRenderDispatcher;render(Lnet/minecraft/world/level/block/entity/BlockEntity;FLcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/MultiBufferSource;)V"
+    },
+    "com/hyperion/optimizer/mixin/MixinClientPlayNetworkHandler": {
+      "handleChunkData": "Lnet/minecraft/client/multiplayer/ClientPacketListener;handleChunkData(Lnet/minecraft/network/protocol/game/ClientboundLevelChunkWithLightPacket;)V"
+    },
+    "com/hyperion/optimizer/mixin/MixinExplosion": {
+      "explode": "Lnet/minecraft/world/level/Explosion;explode()V"
+    },
+    "com/hyperion/optimizer/mixin/MixinLightmapTexture": {
+      "updateLightTexture": "Lnet/minecraft/client/renderer/LightTexture;updateLightTexture(F)V"
+    },
+    "com/hyperion/optimizer/mixin/MixinLivingEntityRenderer": {
+      "render": "Lnet/minecraft/client/renderer/entity/LivingEntityRenderer;render(Lnet/minecraft/world/entity/LivingEntity;FFLcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/MultiBufferSource;I)V"
+    },
+    "com/hyperion/optimizer/mixin/MixinPathNavigation": {
+      "tick": "Lnet/minecraft/world/entity/ai/navigation/PathNavigation;tick()V"
+    },
+    "com/hyperion/optimizer/mixin/MixinRedstoneWireBlock": {
+      "updatePowerCycle": "Lnet/minecraft/world/level/block/RedstoneWireBlock;updatePowerCycle(Lnet/minecraft/world/level/Level;Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/level/block/state/BlockState;Lnet/minecraft/core/Direction;Z)V"
+    },
+    "com/hyperion/optimizer/mixin/MixinSoundEngine": {
+      "play": "Lnet/minecraft/client/sounds/SoundEngine;play(Lnet/minecraft/client/resources/sounds/SoundInstance;)V"
+    }
+  },
+  "data": {
+    "named:intermediary": {
+      "com/hyperion/optimizer/mixin/MixinKeyboard": {
+        "keyPress": "Lnet/minecraft/class_309;method_1454(JIIII)V"
+      },
+      "com/hyperion/optimizer/mixin/MixinInGameHud": {
+        "render": "Lnet/minecraft/class_329;method_1753(Lnet/minecraft/class_332;F)V"
+      },
+      "com/hyperion/optimizer/mixin/MixinLevelRenderer": {
+        "renderLevel": "Lnet/minecraft/class_761;method_22710(Lnet/minecraft/class_4587;FJZLnet/minecraft/class_4184;Lnet/minecraft/class_757;Lnet/minecraft/class_765;Lorg/joml/Matrix4f;)V"
+      },
+      "com/hyperion/optimizer/mixin/MixinExperienceOrbEntity": {
+        "tick": "Lnet/minecraft/class_1303;method_5773()V"
+      },
+      "com/hyperion/optimizer/mixin/MixinHopperBlockEntity": {
+        "pushAndPull": "Lnet/minecraft/class_2614;method_11236(Lnet/minecraft/class_1937;Lnet/minecraft/class_2338;Lnet/minecraft/class_2680;Lnet/minecraft/class_2614;Ljava/util/function/BooleanSupplier;)Z"
+      },
+      "com/hyperion/optimizer/mixin/MixinParticleManager": {
+        "render": "Lnet/minecraft/class_702;method_3043(Lnet/minecraft/class_4184;FLnet/minecraft/class_4604;)V"
+      },
+      "com/hyperion/optimizer/mixin/MixinVideoOptionsScreen": {
+        "init": "Lnet/minecraft/class_446;method_25426()V"
+      },
+      "com/hyperion/optimizer/mixin/MixinBlockEntityRenderDispatcher": {
+        "render": "Lnet/minecraft/class_824;method_3555(Lnet/minecraft/class_2586;FLnet/minecraft/class_4587;Lnet/minecraft/class_4597;)V"
+      },
+      "com/hyperion/optimizer/mixin/MixinClientPlayNetworkHandler": {
+        "handleChunkData": "Lnet/minecraft/class_634;method_11128(Lnet/minecraft/class_2672;)V"
+      },
+      "com/hyperion/optimizer/mixin/MixinExplosion": {
+        "explode": "Lnet/minecraft/class_1927;method_8350()V"
+      },
+      "com/hyperion/optimizer/mixin/MixinLightmapTexture": {
+        "updateLightTexture": "Lnet/minecraft/class_765;method_3313(F)V"
+      },
+      "com/hyperion/optimizer/mixin/MixinLivingEntityRenderer": {
+        "render": "Lnet/minecraft/class_922;method_4054(Lnet/minecraft/class_1309;FFLnet/minecraft/class_4587;Lnet/minecraft/class_4597;I)V"
+      },
+      "com/hyperion/optimizer/mixin/MixinPathNavigation": {
+        "tick": "Lnet/minecraft/class_1408;method_6340()V"
+      },
+      "com/hyperion/optimizer/mixin/MixinRedstoneWireBlock": {
+        "updatePowerCycle": "Lnet/minecraft/class_2478;method_10484(Lnet/minecraft/class_1937;Lnet/minecraft/class_2338;Lnet/minecraft/class_2680;Lnet/minecraft/class_2350;Z)V"
+      },
+      "com/hyperion/optimizer/mixin/MixinSoundEngine": {
+        "play": "Lnet/minecraft/class_1140;method_4873(Lnet/minecraft/class_1113;)V"
+      }
+    },
+    "searge": {
+      "com/hyperion/optimizer/mixin/MixinKeyboard": {
+        "keyPress": "Lnet/minecraft/client/KeyboardListener;func_197961_a(JIIII)V"
+      },
+      "com/hyperion/optimizer/mixin/MixinInGameHud": {
+        "render": "Lnet/minecraft/client/gui/IngameGui;func_238445_a_(Lcom/mojang/blaze3d/matrix/MatrixStack;F)V"
+      },
+      "com/hyperion/optimizer/mixin/MixinLevelRenderer": {
+        "renderLevel": "Lnet/minecraft/client/renderer/WorldRenderer;func_228426_a_(Lcom/mojang/blaze3d/matrix/MatrixStack;FJZLnet/minecraft/client/renderer/ActiveRenderInfo;Lnet/minecraft/client/renderer/GameRenderer;Lnet/minecraft/client/renderer/LightTexture;Lnet/minecraft/util/math/vector/Matrix4f;)V"
+      },
+      "com/hyperion/optimizer/mixin/MixinExperienceOrbEntity": {
+        "tick": "Lnet/minecraft/entity/item/ExperienceOrbEntity;func_70071_h_()V"
+      },
+      "com/hyperion/optimizer/mixin/MixinHopperBlockEntity": {
+        "pushAndPull": "Lnet/minecraft/tileentity/HopperTileEntity;func_145892_a(Lnet/minecraft/world/World;Lnet/minecraft/util/math/BlockPos;Lnet/minecraft/block/BlockState;Lnet/minecraft/tileentity/HopperTileEntity;Ljava/util/function/BooleanSupplier;)Z"
+      },
+      "com/hyperion/optimizer/mixin/MixinParticleManager": {
+        "render": "Lnet/minecraft/client/particle/ParticleManager;func_228345_a_(Lcom/mojang/blaze3d/matrix/MatrixStack;Lnet/minecraft/client/renderer/IRenderTypeBuffer;Lnet/minecraft/client/renderer/LightTexture;Lnet/minecraft/client/renderer/ActiveRenderInfo;F)V"
+      },
+      "com/hyperion/optimizer/mixin/MixinVideoOptionsScreen": {
+        "init": "Lnet/minecraft/client/gui/screen/VideoSettingsScreen;func_231160_c_()V"
+      },
+      "com/hyperion/optimizer/mixin/MixinBlockEntityRenderDispatcher": {
+        "render": "Lnet/minecraft/client/renderer/tileentity/TileEntityRendererDispatcher;func_228850_a_(Lnet/minecraft/tileentity/TileEntity;FLcom/mojang/blaze3d/matrix/MatrixStack;Lnet/minecraft/client/renderer/IRenderTypeBuffer;)V"
+      },
+      "com/hyperion/optimizer/mixin/MixinClientPlayNetworkHandler": {
+        "handleChunkData": "Lnet/minecraft/client/network/play/ClientPlayNetHandler;func_147263_a(Lnet/minecraft/network/play/server/SChunkDataPacket;)V"
+      },
+      "com/hyperion/optimizer/mixin/MixinExplosion": {
+        "explode": "Lnet/minecraft/world/Explosion;func_77278_a()V"
+      },
+      "com/hyperion/optimizer/mixin/MixinLightmapTexture": {
+        "updateLightTexture": "Lnet/minecraft/client/renderer/LightTexture;func_205106_a(F)V"
+      },
+      "com/hyperion/optimizer/mixin/MixinLivingEntityRenderer": {
+        "render": "Lnet/minecraft/client/renderer/entity/LivingRenderer;func_225623_a_(Lnet/minecraft/entity/LivingEntity;FFLcom/mojang/blaze3d/matrix/MatrixStack;Lnet/minecraft/client/renderer/IRenderTypeBuffer;I)V"
+      },
+      "com/hyperion/optimizer/mixin/MixinPathNavigation": {
+        "tick": "Lnet/minecraft/pathfinding/PathNavigator;func_75501_e()V"
+      },
+      "com/hyperion/optimizer/mixin/MixinRedstoneWireBlock": {
+        "updatePowerCycle": "Lnet/minecraft/block/RedstoneWireBlock;func_235882_d_(Lnet/minecraft/world/World;Lnet/minecraft/util/math/BlockPos;Lnet/minecraft/block/BlockState;)V"
+      },
+      "com/hyperion/optimizer/mixin/MixinSoundEngine": {
+        "play": "Lnet/minecraft/client/audio/SoundEngine;func_148611_c(Lnet/minecraft/client/audio/ISound;)V"
+      }
+    }
+  }
+}

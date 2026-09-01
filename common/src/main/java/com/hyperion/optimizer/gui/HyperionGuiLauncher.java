@@ -51,7 +51,14 @@ public final class HyperionGuiLauncher {
             return;
         }
 
-        // 2. Open modern standalone / desktop overlay Swing dashboard
+        // Avoid Swing on macOS and Wayland where GLFW and AWT conflict causes display server deadlock
+        String os = System.getProperty("os.name", "").toLowerCase();
+        if (os.contains("mac") || os.contains("darwin") || System.getenv("WAYLAND_DISPLAY") != null) {
+            LOGGER.info("[Hyperion] macOS / Wayland detected: skipping Swing fallback to prevent GLFW/AWT display server deadlock.");
+            return;
+        }
+
+        // 2. Open modern standalone / desktop overlay Swing dashboard (Windows / Linux X11)
         SwingUtilities.invokeLater(() -> {
             try {
                 if (activeDialog != null && activeDialog.isDisplayable()) {
@@ -78,39 +85,21 @@ public final class HyperionGuiLauncher {
 
     private static boolean tryOpenMinecraftScreen() {
         try {
-            // Attempt reflection for net.minecraft.client.MinecraftClient / Minecraft
-            Class<?> mcClass = null;
-            String[] mcClassNames = {
-                "net.minecraft.client.MinecraftClient",
-                "net.minecraft.client.Minecraft"
-            };
-
-            for (String name : mcClassNames) {
-                try {
-                    mcClass = Class.forName(name);
-                    break;
-                } catch (ClassNotFoundException ignored) {}
+            Class.forName("net.minecraft.client.gui.screens.Screen");
+            net.minecraft.client.Minecraft mc = net.minecraft.client.Minecraft.getInstance();
+            if (mc != null) {
+                mc.execute(() -> {
+                    try {
+                        net.minecraft.client.gui.screens.Screen current = HyperionInGameScreen.getCurrentScreen(mc);
+                        HyperionInGameScreen.setMinecraftScreen(mc, new HyperionInGameScreen(current));
+                    } catch (Throwable t) {
+                        LOGGER.log(Level.WARNING, "[Hyperion] Failed to set in-game Screen", t);
+                    }
+                });
+                return true;
             }
-
-            if (mcClass == null) return false;
-
-            java.lang.reflect.Method getInstanceMethod = null;
-            for (String methodName : new String[]{"getInstance", "func_71410_x"}) {
-                try {
-                    getInstanceMethod = mcClass.getMethod(methodName);
-                    break;
-                } catch (Exception ignored) {}
-            }
-
-            if (getInstanceMethod == null) return false;
-            Object mcInstance = getInstanceMethod.invoke(null);
-            if (mcInstance == null) return false;
-
-            // In-game screen integration point
-            return false; // Fall through to rich Swing dialog for seamless cross-version rendering
-        } catch (Throwable ignored) {
-            return false;
-        }
+        } catch (Throwable ignored) {}
+        return false;
     }
 
     private static void createAndShowGui() {

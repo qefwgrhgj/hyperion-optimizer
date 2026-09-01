@@ -6,7 +6,7 @@ import java.nio.ByteOrder;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
- * ⚡ GPU-Driven Voxel LOD Multi-Draw Indirect Renderer (Inspired by Voxy).
+ * ⚡ GPU-Driven Voxel LOD Multi-Draw Indirect Renderer.
  *
  * Implements GPU-driven batched rendering for millions of distant voxel LOD cubes
  * without per-chunk draw call overhead:

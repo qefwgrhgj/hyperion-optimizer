@@ -1,27 +1,75 @@
 plugins {
-    id "java"
-    id "architectury-plugin" version "3.4-SNAPSHOT" apply false
-    id "dev.architectury.loom" version "1.6-SNAPSHOT" apply false
+    id "base"
 }
 
 allprojects {
     group = "com.hyperion"
     version = "1.0.3"
 
-    apply plugin: "java"
-
     repositories {
         mavenCentral()
         maven { url = "https://maven.fabricmc.net/" }
-        maven { url = "https://maven.architectury.dev/" }
     }
 }
 
-// Version-specific Java target bytecode compatibility
-project(":common") {
+def requiredJars = [
+    "C:/Users/Admin/AppData/Roaming/ElyPrismLauncher/libraries/net/fabricmc/fabric-loader/0.19.3/fabric-loader-0.19.3.jar",
+    "C:/Users/Admin/AppData/Roaming/ElyPrismLauncher/libraries/com/mojang/brigadier/1.3.10/brigadier-1.3.10.jar",
+    "C:/Users/Admin/AppData/Roaming/ElyPrismLauncher/libraries/net/fabricmc/sponge-mixin/0.17.3+mixin.0.8.7/sponge-mixin-0.17.3+mixin.0.8.7.jar",
+    "C:/Users/Admin/AppData/Roaming/ElyPrismLauncher/libraries/net/minecraftforge/javafmllanguage/1.20.1-47.4.22/javafmllanguage-1.20.1-47.4.22.jar",
+    "C:/Users/Admin/AppData/Roaming/ElyPrismLauncher/libraries/com/mojang/datafixerupper/10.0.21/datafixerupper-10.0.21.jar",
+    "C:/Users/Admin/AppData/Roaming/ElyPrismLauncher/libraries/com/google/code/gson/gson/2.14.0/gson-2.14.0.jar",
+    "C:/Users/Admin/AppData/Roaming/ElyPrismLauncher/libraries/com/google/guava/guava/33.6.0-jre/guava-33.6.0-jre.jar",
+    "C:/Users/Admin/AppData/Roaming/ElyPrismLauncher/libraries/it/unimi/dsi/fastutil/8.5.18/fastutil-8.5.18.jar",
+    "C:/Users/Admin/AppData/Roaming/ElyPrismLauncher/libraries/org/joml/joml/1.10.8/joml-1.10.8.jar",
+    "C:/Users/Admin/AppData/Roaming/ElyPrismLauncher/libraries/org/apache/commons/commons-lang3/3.20.0/commons-lang3-3.20.0.jar",
+    "C:/Users/Admin/AppData/Roaming/ElyPrismLauncher/libraries/commons-io/commons-io/2.20.0/commons-io-2.20.0.jar",
+    "C:/Users/Admin/AppData/Roaming/ElyPrismLauncher/libraries/commons-codec/commons-codec/1.22.0/commons-codec-1.22.0.jar",
+    "C:/Users/Admin/AppData/Roaming/ElyPrismLauncher/libraries/by/ely/authlib/9.0.75-ely.1/authlib-9.0.75-ely.1.jar",
+    "C:/Users/Admin/AppData/Roaming/ElyPrismLauncher/libraries/com/mojang/logging/1.7.12/logging-1.7.12.jar",
+    "C:/Users/Admin/AppData/Roaming/ElyPrismLauncher/libraries/org/slf4j/slf4j-api/2.0.17/slf4j-api-2.0.17.jar",
+    "C:/Users/Admin/AppData/Roaming/ElyPrismLauncher/libraries/org/apache/logging/log4j/log4j-api/2.26.0/log4j-api-2.26.0.jar",
+    "C:/Users/Admin/AppData/Roaming/ElyPrismLauncher/libraries/org/apache/logging/log4j/log4j-slf4j2-impl/2.26.0/log4j-slf4j2-impl-2.26.0.jar",
+    "C:/Users/Admin/AppData/Roaming/ElyPrismLauncher/libraries/org/ow2/asm/asm/9.10.1/asm-9.10.1.jar",
+    "C:/Users/Admin/AppData/Roaming/ElyPrismLauncher/libraries/org/ow2/asm/asm-tree/9.10.1/asm-tree-9.10.1.jar",
+    "C:/Users/Admin/AppData/Roaming/ElyPrismLauncher/libraries/org/ow2/asm/asm-commons/9.10.1/asm-commons-9.10.1.jar"
+].findAll { new File(it).exists() }
+
+subprojects {
+    apply plugin: "java"
+
     tasks.withType(JavaCompile).configureEach {
         options.encoding = "UTF-8"
-        options.release = 8 // Maximum backwards-compatibility across all MC versions
+    }
+
+    dependencies {
+        compileOnly files(requiredJars)
+        testImplementation files(requiredJars)
+    }
+
+    if (project.name != "common" && project.name != "compile-stubs") {
+        dependencies {
+            implementation project(":compile-stubs")
+            implementation project(":common")
+        }
+    }
+}
+
+project(":compile-stubs") {
+    sourceCompatibility = JavaVersion.VERSION_1_8
+    targetCompatibility = JavaVersion.VERSION_1_8
+    dependencies {
+        compileOnly files(requiredJars)
+    }
+}
+
+project(":common") {
+    sourceCompatibility = JavaVersion.VERSION_1_8
+    targetCompatibility = JavaVersion.VERSION_1_8
+    dependencies {
+        implementation project(":compile-stubs")
+        compileOnly files(requiredJars)
+        testImplementation files(requiredJars)
     }
 }
 
@@ -63,3 +111,5 @@ project(":neoforge-26.1") { tasks.withType(JavaCompile).configureEach { options.
 
 project(":fabric-26.2") { tasks.withType(JavaCompile).configureEach { options.release = 21 } }
 project(":neoforge-26.2") { tasks.withType(JavaCompile).configureEach { options.release = 21 } }
+
+

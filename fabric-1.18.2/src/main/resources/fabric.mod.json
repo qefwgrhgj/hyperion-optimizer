@@ -1,24 +1,36 @@
 {
   "schemaVersion": 1,
-  "id": "hyperion",
+  "id": "hyperion-optimizer",
   "version": "1.0.3",
   "name": "Hyperion Optimizer",
   "description": "High-Performance Sovereign Multi-Core Cross-Platform Minecraft Optimization Engine.",
   "authors": [
     "Hyperion Team"
   ],
-  "license": "LGPL-3.0-only",
+  "license": "MIT",
+  "icon": "icon.png",
+  "contact": {
+    "homepage": "https://modrinth.com/mod/hyperion-optimizer",
+    "sources": "https://github.com/qefwgrhgj/hyperion-optimizer",
+    "issues": "https://github.com/qefwgrhgj/hyperion-optimizer/issues"
+  },
   "environment": "*",
   "entrypoints": {
     "main": [
       "com.hyperion.optimizer.fabric.HyperionFabric1182"
+    ],
+    "client": [
+      "com.hyperion.optimizer.fabric.HyperionFabric1182"
+    ],
+    "modmenu": [
+      "com.hyperion.optimizer.compat.HyperionModMenuCompat"
     ]
   },
   "mixins": [
     "hyperion.mixins.json"
   ],
   "depends": {
-    "fabricloader": ">=0.13.0",
+    "fabricloader": ">=0.14.21",
     "minecraft": ">=1.18 <=1.18.2",
     "java": ">=17"
   }

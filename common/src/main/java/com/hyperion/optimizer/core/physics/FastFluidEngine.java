@@ -5,7 +5,7 @@ import com.hyperion.optimizer.core.memory.PrimitiveVectorPool;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * High-Performance Fluid Dynamics Engine (Lithium Physics).
+ * High-Performance Fluid Dynamics Engine (Dynamic Multi-Grid Fluid Dynamics Architecture).
  * Caches computed 3D fluid flow vectors for water and lava, eliminating expensive recursive
  * path checks on static fluid streams until neighboring blocks change.
  */

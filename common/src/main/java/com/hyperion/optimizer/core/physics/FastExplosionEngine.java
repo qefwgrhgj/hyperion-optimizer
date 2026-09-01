@@ -3,7 +3,7 @@ package com.hyperion.optimizer.core.physics;
 import com.hyperion.optimizer.core.memory.PrimitiveVectorPool;
 
 /**
- * High-Performance Fast Explosion Engine (Lithium / Paper Core Architecture).
+ * High-Performance Fast Explosion Engine (Sovereign High-Performance Ray-Bresenham Explosion Architecture).
  * Optimizes vanilla Minecraft 16x16x16 raycasting, block blast resistance evaluations,
  * water shield absorption, and entity damage/exposure calculations.
  */

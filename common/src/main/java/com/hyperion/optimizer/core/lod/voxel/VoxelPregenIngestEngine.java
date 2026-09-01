@@ -7,7 +7,7 @@ import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
- * ⚙️ Asynchronous Voxel Ingestion & Pre-Generation Engine (Inspired by Voxy).
+ * ⚙️ Asynchronous Voxel Ingestion & Pre-Generation Engine.
  *
  * Captures loaded chunk voxel data in the background (as the player travels or through
  * pre-generation utilities like Chunky / DH Importers) and offloads Mip generation

@@ -6,7 +6,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.LongAdder;
 
 /**
- * 💾 Compact Voxel Section Storage & Palette Compression Engine (Inspired by Voxy).
+ * 💾 Compact Voxel Section Storage & Palette Compression Engine.
  *
  * Employs Run-Length Encoding (RLE) and 8-bit adaptive palette indexing to compress
  * downsampled distant chunk sections from 4096 bytes down to an average of 32–128 bytes per section.

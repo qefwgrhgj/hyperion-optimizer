@@ -73,10 +73,10 @@ public final class HyperionThreadPoolManager {
                 break;
         }
 
-        int meshingThreads = Math.max(1, (targetThreads * 5) / 8);
-        int entityThreads = Math.max(1, targetThreads / 4);
-        int lightThreads = Math.max(1, targetThreads / 4);
-        int ioThreads = Math.max(1, Math.min(4, targetThreads / 4));
+        int meshingThreads = Math.max(1, targetThreads <= 8 ? Math.max(1, targetThreads / 2 - 1) : (targetThreads * 5) / 8);
+        int entityThreads = Math.max(1, targetThreads <= 8 ? 1 : targetThreads / 4);
+        int lightThreads = Math.max(1, targetThreads <= 8 ? 1 : targetThreads / 4);
+        int ioThreads = Math.max(1, Math.min(2, targetThreads / 4));
 
         LOGGER.info(String.format("[Hyperion-CPU] Initialized Multi-Core Engine: Detected %d Logical / %d Physical Cores. Allocated: Meshing=%d, Entity=%d, Light=%d, IO=%d threads.",
                 logicalCores, physicalCores, meshingThreads, entityThreads, lightThreads, ioThreads));
@@ -92,7 +92,7 @@ public final class HyperionThreadPoolManager {
                 entityThreads, entityThreads,
                 60L, TimeUnit.SECONDS,
                 new LinkedBlockingQueue<>(2048),
-                new NamedThreadFactory("Hyperion-Entity-Worker", Thread.NORM_PRIORITY + 1),
+                new NamedThreadFactory("Hyperion-Entity-Worker", Thread.NORM_PRIORITY - 1),
                 new ThreadPoolExecutor.CallerRunsPolicy()
         );
 
@@ -100,7 +100,7 @@ public final class HyperionThreadPoolManager {
                 lightThreads, lightThreads,
                 60L, TimeUnit.SECONDS,
                 new LinkedBlockingQueue<>(4096),
-                new NamedThreadFactory("Hyperion-Light-Worker", Thread.NORM_PRIORITY),
+                new NamedThreadFactory("Hyperion-Light-Worker", Thread.NORM_PRIORITY - 1),
                 new ThreadPoolExecutor.CallerRunsPolicy()
         );
 
@@ -113,8 +113,8 @@ public final class HyperionThreadPoolManager {
         );
 
         this.tickScheduler = Executors.newScheduledThreadPool(
-                2,
-                new NamedThreadFactory("Hyperion-Scheduler", Thread.MAX_PRIORITY)
+                1,
+                new NamedThreadFactory("Hyperion-Scheduler", Thread.NORM_PRIORITY)
         );
     }
 

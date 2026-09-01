@@ -381,7 +381,37 @@ public final class HyperionConfigStorage {
         sb.append("  \"enableBlockStateDeduplication\": ").append(c.enableBlockStateDeduplication).append(",\n");
 
         sb.append("  \"enableAsyncAudio\": ").append(c.enableAsyncAudio).append(",\n");
-        sb.append("  \"maxSimultaneousSoundChannels\": ").append(c.maxSimultaneousSoundChannels).append("\n");
+        sb.append("  \"maxSimultaneousSoundChannels\": ").append(c.maxSimultaneousSoundChannels).append(",\n");
+
+        // 5. Voxel LOD & Infinite Horizon
+        sb.append("  \"enableVoxelLodEngine\": ").append(c.enableVoxelLodEngine).append(",\n");
+        sb.append("  \"voxelMaxRenderDistanceChunks\": ").append(c.voxelMaxRenderDistanceChunks).append(",\n");
+        sb.append("  \"enableVoxelHorizonBlending\": ").append(c.enableVoxelHorizonBlending).append(",\n");
+        sb.append("  \"voxelBlendStartChunks\": ").append(c.voxelBlendStartChunks).append(",\n");
+        sb.append("  \"voxelBlendEndChunks\": ").append(c.voxelBlendEndChunks).append(",\n");
+        sb.append("  \"enableVoxelAtmosphericFog\": ").append(c.enableVoxelAtmosphericFog).append(",\n");
+        sb.append("  \"voxelStorageCompression\": \"").append(c.voxelStorageCompression).append("\",\n");
+
+        // 6. Advanced Mesh, Geometry & Resource Packs
+        sb.append("  \"enableChunkLod\": ").append(c.enableChunkLod).append(",\n");
+        sb.append("  \"chunkLodDistanceBlocks\": ").append(c.chunkLodDistanceBlocks).append(",\n");
+        sb.append("  \"chunkLodFarDistanceBlocks\": ").append(c.chunkLodFarDistanceBlocks).append(",\n");
+        sb.append("  \"chunkLodSimplificationFactor\": ").append(c.chunkLodSimplificationFactor).append(",\n");
+        sb.append("  \"enableAggressiveFaceCulling\": ").append(c.enableAggressiveFaceCulling).append(",\n");
+        sb.append("  \"enableInternalCavityCulling\": ").append(c.enableInternalCavityCulling).append(",\n");
+        sb.append("  \"enableGpuBlockInstancing\": ").append(c.enableGpuBlockInstancing).append(",\n");
+        sb.append("  \"maxInstancesPerBatch\": ").append(c.maxInstancesPerBatch).append(",\n");
+        sb.append("  \"enableGpuResetCrashGuard\": ").append(c.enableGpuResetCrashGuard).append(",\n");
+        sb.append("  \"enableHdTextureOptimization\": ").append(c.enableHdTextureOptimization).append(",\n");
+        sb.append("  \"enableAsyncAnimatedTextures\": ").append(c.enableAsyncAnimatedTextures).append(",\n");
+        sb.append("  \"enableAdaptiveMipmapPacing\": ").append(c.enableAdaptiveMipmapPacing).append(",\n");
+        sb.append("  \"maxHdAtlasDimension\": ").append(c.maxHdAtlasDimension).append(",\n");
+        sb.append("  \"enableSmartLeavesCulling\": ").append(c.enableSmartLeavesCulling).append(",\n");
+        sb.append("  \"enableFabulousGraphicsOptimization\": ").append(c.enableFabulousGraphicsOptimization).append(",\n");
+        sb.append("  \"enableTranslucentSortThrottling\": ").append(c.enableTranslucentSortThrottling).append(",\n");
+        sb.append("  \"enableFastCloudEngine\": ").append(c.enableFastCloudEngine).append(",\n");
+        sb.append("  \"enableCloudCulling\": ").append(c.enableCloudCulling).append(",\n");
+        sb.append("  \"enableCloudMeshReuse\": ").append(c.enableCloudMeshReuse).append("\n");
 
         sb.append("}\n");
         return sb.toString();
@@ -499,6 +529,36 @@ public final class HyperionConfigStorage {
 
         if (map.containsKey("enableAsyncAudio")) c.enableAsyncAudio = Boolean.parseBoolean(map.get("enableAsyncAudio"));
         if (map.containsKey("maxSimultaneousSoundChannels")) c.maxSimultaneousSoundChannels = parseInt(map.get("maxSimultaneousSoundChannels"), c.maxSimultaneousSoundChannels);
+
+        // Voxel LOD Ultra-Distance
+        if (map.containsKey("enableVoxelLodEngine")) c.enableVoxelLodEngine = Boolean.parseBoolean(map.get("enableVoxelLodEngine"));
+        if (map.containsKey("voxelMaxRenderDistanceChunks")) c.voxelMaxRenderDistanceChunks = parseInt(map.get("voxelMaxRenderDistanceChunks"), c.voxelMaxRenderDistanceChunks);
+        if (map.containsKey("enableVoxelHorizonBlending")) c.enableVoxelHorizonBlending = Boolean.parseBoolean(map.get("enableVoxelHorizonBlending"));
+        if (map.containsKey("voxelBlendStartChunks")) c.voxelBlendStartChunks = parseDouble(map.get("voxelBlendStartChunks"), c.voxelBlendStartChunks);
+        if (map.containsKey("voxelBlendEndChunks")) c.voxelBlendEndChunks = parseDouble(map.get("voxelBlendEndChunks"), c.voxelBlendEndChunks);
+        if (map.containsKey("enableVoxelAtmosphericFog")) c.enableVoxelAtmosphericFog = Boolean.parseBoolean(map.get("enableVoxelAtmosphericFog"));
+        if (map.containsKey("voxelStorageCompression")) c.voxelStorageCompression = map.get("voxelStorageCompression");
+
+        // Advanced Mesh & Geometry Tweaks
+        if (map.containsKey("enableChunkLod")) c.enableChunkLod = Boolean.parseBoolean(map.get("enableChunkLod"));
+        if (map.containsKey("chunkLodDistanceBlocks")) c.chunkLodDistanceBlocks = parseDouble(map.get("chunkLodDistanceBlocks"), c.chunkLodDistanceBlocks);
+        if (map.containsKey("chunkLodFarDistanceBlocks")) c.chunkLodFarDistanceBlocks = parseDouble(map.get("chunkLodFarDistanceBlocks"), c.chunkLodFarDistanceBlocks);
+        if (map.containsKey("chunkLodSimplificationFactor")) c.chunkLodSimplificationFactor = parseDouble(map.get("chunkLodSimplificationFactor"), c.chunkLodSimplificationFactor);
+        if (map.containsKey("enableAggressiveFaceCulling")) c.enableAggressiveFaceCulling = Boolean.parseBoolean(map.get("enableAggressiveFaceCulling"));
+        if (map.containsKey("enableInternalCavityCulling")) c.enableInternalCavityCulling = Boolean.parseBoolean(map.get("enableInternalCavityCulling"));
+        if (map.containsKey("enableGpuBlockInstancing")) c.enableGpuBlockInstancing = Boolean.parseBoolean(map.get("enableGpuBlockInstancing"));
+        if (map.containsKey("maxInstancesPerBatch")) c.maxInstancesPerBatch = parseInt(map.get("maxInstancesPerBatch"), c.maxInstancesPerBatch);
+        if (map.containsKey("enableGpuResetCrashGuard")) c.enableGpuResetCrashGuard = Boolean.parseBoolean(map.get("enableGpuResetCrashGuard"));
+        if (map.containsKey("enableHdTextureOptimization")) c.enableHdTextureOptimization = Boolean.parseBoolean(map.get("enableHdTextureOptimization"));
+        if (map.containsKey("enableAsyncAnimatedTextures")) c.enableAsyncAnimatedTextures = Boolean.parseBoolean(map.get("enableAsyncAnimatedTextures"));
+        if (map.containsKey("enableAdaptiveMipmapPacing")) c.enableAdaptiveMipmapPacing = Boolean.parseBoolean(map.get("enableAdaptiveMipmapPacing"));
+        if (map.containsKey("maxHdAtlasDimension")) c.maxHdAtlasDimension = parseInt(map.get("maxHdAtlasDimension"), c.maxHdAtlasDimension);
+        if (map.containsKey("enableSmartLeavesCulling")) c.enableSmartLeavesCulling = Boolean.parseBoolean(map.get("enableSmartLeavesCulling"));
+        if (map.containsKey("enableFabulousGraphicsOptimization")) c.enableFabulousGraphicsOptimization = Boolean.parseBoolean(map.get("enableFabulousGraphicsOptimization"));
+        if (map.containsKey("enableTranslucentSortThrottling")) c.enableTranslucentSortThrottling = Boolean.parseBoolean(map.get("enableTranslucentSortThrottling"));
+        if (map.containsKey("enableFastCloudEngine")) c.enableFastCloudEngine = Boolean.parseBoolean(map.get("enableFastCloudEngine"));
+        if (map.containsKey("enableCloudCulling")) c.enableCloudCulling = Boolean.parseBoolean(map.get("enableCloudCulling"));
+        if (map.containsKey("enableCloudMeshReuse")) c.enableCloudMeshReuse = Boolean.parseBoolean(map.get("enableCloudMeshReuse"));
 
         return c;
     }

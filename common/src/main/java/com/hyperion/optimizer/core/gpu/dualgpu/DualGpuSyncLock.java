@@ -58,7 +58,7 @@ public final class DualGpuSyncLock {
 
             // Adaptive backoff: short spins first, then micro-parks to yield CPU
             if (elapsed < spinYieldThresholdNanos) {
-                Thread.onSpinWait();
+                safeSpinWait();
             } else {
                 LockSupport.parkNanos(100_000L); // 100 microsecond gentle sleep
             }
@@ -84,5 +84,14 @@ public final class DualGpuSyncLock {
         successfulSyncs.set(0);
         timedOutSyncs.set(0);
         totalWaitTimeNanos.set(0);
+    }
+
+    private static void safeSpinWait() {
+        try {
+            java.lang.reflect.Method m = Thread.class.getMethod("onSpinWait");
+            m.invoke(null);
+        } catch (Throwable ignored) {
+            Thread.yield();
+        }
     }
 }
