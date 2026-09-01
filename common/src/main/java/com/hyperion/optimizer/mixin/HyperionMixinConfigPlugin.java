@@ -61,6 +61,38 @@ public class HyperionMixinConfigPlugin implements IMixinConfigPlugin {
             }
         }
 
+        if (mixinClassName != null && mixinClassName.endsWith("MixinInGameHud")) {
+            // MixinInGameHud targets Gui.render(). In modern versions (like 26.2), Gui has no render() method.
+            // Skip applying MixinInGameHud if Gui lacks a render method to prevent breaking GuiMixin in Fabric Screen API.
+            try {
+                Class<?> guiClass = Class.forName("net.minecraft.client.gui.Gui", false, Thread.currentThread().getContextClassLoader());
+                boolean hasRender = false;
+                for (java.lang.reflect.Method m : guiClass.getDeclaredMethods()) {
+                    if (m.getName().equals("render")) {
+                        hasRender = true;
+                        break;
+                    }
+                }
+                if (!hasRender) {
+                    return false;
+                }
+            } catch (Throwable ignored) {
+                try {
+                    Class<?> guiClass = Class.forName("net.minecraft.client.gui.Gui", false, HyperionMixinConfigPlugin.class.getClassLoader());
+                    boolean hasRender = false;
+                    for (java.lang.reflect.Method m : guiClass.getDeclaredMethods()) {
+                        if (m.getName().equals("render")) {
+                            hasRender = true;
+                            break;
+                        }
+                    }
+                    if (!hasRender) {
+                        return false;
+                    }
+                } catch (Throwable ignored2) {}
+            }
+        }
+
         if (targetClassName == null || targetClassName.isEmpty()) {
             return true;
         }

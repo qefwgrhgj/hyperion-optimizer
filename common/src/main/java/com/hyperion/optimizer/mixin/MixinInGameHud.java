@@ -16,7 +16,7 @@ import com.hyperion.optimizer.core.hud.DecoupledHudManager;
 })
 @Environment(EnvType.CLIENT)
 public class MixinInGameHud {
-    @Inject(method = "render", at = @At("HEAD"))
+    @Inject(method = "render", at = @At("HEAD"), require = 0)
     private void onRenderHud(CallbackInfo ci) {
         shouldRepaintHud(System.nanoTime());
     }
