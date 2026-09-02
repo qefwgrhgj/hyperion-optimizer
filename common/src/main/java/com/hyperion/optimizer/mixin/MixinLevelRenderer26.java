@@ -33,7 +33,7 @@ import java.util.List;
 @Mixin(targets = "net.minecraft.client.renderer.LevelRenderer")
 @Environment(EnvType.CLIENT)
 public class MixinLevelRenderer26 {
-    private static long resortFrameCounter = 0;
+    private static long lastResortTimeMs = 0;
     private static final double MAX_BLOCK_ENTITY_DIST_SQ = 64.0 * 64.0; // 4096.0
     private static final double MAX_ENTITY_DIST_SQ = 64.0 * 64.0;       // 4096.0
 
@@ -46,36 +46,50 @@ public class MixinLevelRenderer26 {
         CameraRenderState cam = state.cameraRenderState;
         Vec3 camPos = cam != null ? cam.pos : null;
 
-        // 1. Culling distant block entities on surface (chests, signs, banners)
+        // 1. Two-pointer in-place compaction for block entities (zero arraycopy shifting overhead)
         List<BlockEntityRenderState> blockEntities = state.blockEntityRenderStates;
         if (camPos != null && blockEntities != null && !blockEntities.isEmpty()) {
             double cx = camPos.x;
             double cy = camPos.y;
             double cz = camPos.z;
-            Iterator<BlockEntityRenderState> it = blockEntities.iterator();
-            while (it.hasNext()) {
-                BlockEntityRenderState be = it.next();
-                BlockPos pos = be.blockPos;
+            int writeIdx = 0;
+            int size = blockEntities.size();
+            for (int readIdx = 0; readIdx < size; readIdx++) {
+                BlockEntityRenderState be = blockEntities.get(readIdx);
+                BlockPos pos = be != null ? be.blockPos : null;
                 if (pos != null) {
                     double dx = pos.getX() + 0.5 - cx;
                     double dy = pos.getY() + 0.5 - cy;
                     double dz = pos.getZ() + 0.5 - cz;
-                    if ((dx * dx + dy * dy + dz * dz) > MAX_BLOCK_ENTITY_DIST_SQ) {
-                        it.remove();
+                    if ((dx * dx + dy * dy + dz * dz) <= MAX_BLOCK_ENTITY_DIST_SQ) {
+                        if (writeIdx != readIdx) {
+                            blockEntities.set(writeIdx, be);
+                        }
+                        writeIdx++;
                     }
                 }
             }
+            if (writeIdx < size) {
+                blockEntities.subList(writeIdx, size).clear();
+            }
         }
 
-        // 2. Culling distant non-boss living entities on surface
+        // 2. Two-pointer in-place compaction for living entities
         List<EntityRenderState> entities = state.entityRenderStates;
         if (entities != null && !entities.isEmpty()) {
-            Iterator<EntityRenderState> it = entities.iterator();
-            while (it.hasNext()) {
-                EntityRenderState e = it.next();
-                if (!e.appearsGlowing() && e.distanceToCameraSq > MAX_ENTITY_DIST_SQ) {
-                    it.remove();
+            int writeIdx = 0;
+            int size = entities.size();
+            for (int readIdx = 0; readIdx < size; readIdx++) {
+                EntityRenderState e = entities.get(readIdx);
+                if (e != null && (e.appearsGlowing() || e.distanceToCameraSq <= MAX_ENTITY_DIST_SQ)) {
+                    if (writeIdx != readIdx) {
+                        entities.set(writeIdx, e);
+                    }
+                    writeIdx++;
                 }
+            }
+            if (writeIdx < size) {
+                entities.subList(writeIdx, size).clear();
             }
         }
     }
@@ -84,9 +98,11 @@ public class MixinLevelRenderer26 {
     private void onScheduleResort(CallbackInfo ci) {
         FancyGraphicsOptimizer optimizer = HyperionEngine.getInstance().getFancyGraphicsOptimizer();
         if (optimizer != null && optimizer.isEnabled()) {
-            // Throttle translucent sorting to at most once every 12 frames to eliminate 30 FPS CPU freezes
-            if ((++resortFrameCounter % 12) != 0) {
+            long now = System.currentTimeMillis();
+            if ((now - lastResortTimeMs) < 250L) { // Maximum 4 sorts per second
                 ci.cancel();
+            } else {
+                lastResortTimeMs = now;
             }
         }
     }

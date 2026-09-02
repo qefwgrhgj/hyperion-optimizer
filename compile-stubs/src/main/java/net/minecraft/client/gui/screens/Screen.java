@@ -1,5 +1,7 @@
 package net.minecraft.client.gui.screens;
 
+import net.minecraft.network.chat.Component;
+
 public class Screen {
     public Screen parent;
     public Object minecraft;
@@ -7,7 +9,7 @@ public class Screen {
     public int height;
 
     public Screen() {}
-    public Screen(Object title) {}
+    public Screen(Component title) {}
     protected void init() {}
     public void clearWidgets() {}
     public void onClose() {}
