@@ -1,8 +1,9 @@
 package net.minecraft.client.gui.components;
 
+import net.minecraft.client.gui.components.events.GuiEventListener;
 import net.minecraft.network.chat.Component;
 
-public class Button {
+public class Button implements GuiEventListener {
     public boolean active = true;
 
     public static Builder builder(Component message, OnPress onPress) {

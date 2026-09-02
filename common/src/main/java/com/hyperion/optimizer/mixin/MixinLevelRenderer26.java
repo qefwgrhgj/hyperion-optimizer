@@ -34,8 +34,10 @@ import java.util.List;
 @Environment(EnvType.CLIENT)
 public class MixinLevelRenderer26 {
     private static long lastResortTimeMs = 0;
-    private static final double MAX_BLOCK_ENTITY_DIST_SQ = 64.0 * 64.0; // 4096.0
+    private static volatile double lastCamY = 100.0;
+    private static final double MAX_BLOCK_ENTITY_DIST_SQ = 48.0 * 48.0; // 2304.0
     private static final double MAX_ENTITY_DIST_SQ = 64.0 * 64.0;       // 4096.0
+    private static final double MAX_VERTICAL_OCCLUSION_DIFF = 24.0;
 
     @Inject(method = "submitFeatures", at = @At("HEAD"), require = 0)
     private void onSubmitFeatures(LevelRenderState state, SubmitNodeCollector collector, boolean bl, CallbackInfo ci) {
@@ -45,6 +47,9 @@ public class MixinLevelRenderer26 {
 
         CameraRenderState cam = state.cameraRenderState;
         Vec3 camPos = cam != null ? cam.pos : null;
+        if (camPos != null) {
+            lastCamY = camPos.y;
+        }
 
         // 1. Two-pointer in-place compaction for block entities (zero arraycopy shifting overhead)
         List<BlockEntityRenderState> blockEntities = state.blockEntityRenderStates;
@@ -58,14 +63,16 @@ public class MixinLevelRenderer26 {
                 BlockEntityRenderState be = blockEntities.get(readIdx);
                 BlockPos pos = be != null ? be.blockPos : null;
                 if (pos != null) {
-                    double dx = pos.getX() + 0.5 - cx;
-                    double dy = pos.getY() + 0.5 - cy;
-                    double dz = pos.getZ() + 0.5 - cz;
-                    if ((dx * dx + dy * dy + dz * dz) <= MAX_BLOCK_ENTITY_DIST_SQ) {
-                        if (writeIdx != readIdx) {
-                            blockEntities.set(writeIdx, be);
+                    double dy = Math.abs(pos.getY() + 0.5 - cy);
+                    if (dy <= MAX_VERTICAL_OCCLUSION_DIFF) {
+                        double dx = pos.getX() + 0.5 - cx;
+                        double dz = pos.getZ() + 0.5 - cz;
+                        if ((dx * dx + dy * dy + dz * dz) <= MAX_BLOCK_ENTITY_DIST_SQ) {
+                            if (writeIdx != readIdx) {
+                                blockEntities.set(writeIdx, be);
+                            }
+                            writeIdx++;
                         }
-                        writeIdx++;
                     }
                 }
             }
@@ -74,18 +81,27 @@ public class MixinLevelRenderer26 {
             }
         }
 
-        // 2. Two-pointer in-place compaction for living entities
+        // 2. Two-pointer in-place compaction for living entities (MoreCulling & EntityCulling)
         List<EntityRenderState> entities = state.entityRenderStates;
-        if (entities != null && !entities.isEmpty()) {
+        if (camPos != null && entities != null && !entities.isEmpty()) {
+            double cy = camPos.y;
             int writeIdx = 0;
             int size = entities.size();
             for (int readIdx = 0; readIdx < size; readIdx++) {
                 EntityRenderState e = entities.get(readIdx);
-                if (e != null && (e.appearsGlowing() || e.distanceToCameraSq <= MAX_ENTITY_DIST_SQ)) {
-                    if (writeIdx != readIdx) {
-                        entities.set(writeIdx, e);
+                if (e != null) {
+                    if (e.appearsGlowing()) {
+                        if (writeIdx != readIdx) entities.set(writeIdx, e);
+                        writeIdx++;
+                    } else if (e.distanceToCameraSq <= MAX_ENTITY_DIST_SQ) {
+                        double dy = Math.abs(e.y - cy);
+                        if (dy <= MAX_VERTICAL_OCCLUSION_DIFF) {
+                            if (writeIdx != readIdx) {
+                                entities.set(writeIdx, e);
+                            }
+                            writeIdx++;
+                        }
                     }
-                    writeIdx++;
                 }
             }
             if (writeIdx < size) {
@@ -111,7 +127,10 @@ public class MixinLevelRenderer26 {
     private void onAddCloudsPass(CallbackInfo ci) {
         FastCloudEngine clouds = HyperionEngine.getInstance().getFastCloudEngine();
         if (clouds != null && clouds.isEnabled()) {
-            // Skip cloud rendering when underground
+            // Cancel cloud pass when deep underground in cave (Y < 55)
+            if (lastCamY < 55.0) {
+                ci.cancel();
+            }
         }
     }
 }

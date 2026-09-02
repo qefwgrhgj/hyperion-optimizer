@@ -154,6 +154,7 @@ public final class HyperionEngine {
         this.multiCoreEntityPhysics = new MultiCoreEntityPhysicsEngine(config.enableMultiCoreEntityPhysics, config.entityPhysicsBatchSize);
         this.asyncWorldTickDispatcher = new AsyncWorldTickDispatcher(config.enableAsyncWorldTickDispatcher);
         this.cpuAffinityGovernor = new CpuCoreAffinityGovernor(config.enableCpuCoreAffinity, config.enableThreadPriorityBoost);
+        this.cpuAffinityGovernor.optimizeCurrentThread("RENDER_MAIN");
 
         // 2. Memory & Pool Initialization
         PrimitiveVectorPool.init();

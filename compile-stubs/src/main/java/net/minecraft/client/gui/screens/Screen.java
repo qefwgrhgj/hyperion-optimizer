@@ -1,6 +1,7 @@
 package net.minecraft.client.gui.screens;
 
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.components.events.GuiEventListener;
 import net.minecraft.network.chat.Component;
 
 public class Screen {
@@ -18,5 +19,5 @@ public class Screen {
     public void renderBackground(Object graphics) {}
     public boolean keyPressed(int keyCode, int scanCode, int modifiers) { return false; }
     public boolean isPauseScreen() { return false; }
-    public <T> T addRenderableWidget(T widget) { return widget; }
+    protected <T extends GuiEventListener> T addRenderableWidget(T widget) { return widget; }
 }

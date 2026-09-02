@@ -61,7 +61,7 @@ public class HyperionInGameScreen extends Screen {
     }
 
     private void rebuildScreen() {
-        this.clearWidgets();
+        this.clearWidgetsCompat();
         HyperionConfig config = model.getWorkingConfig();
 
         // 1. Top Category Tabs (2 rows of 5 tabs)
@@ -90,7 +90,7 @@ public class HyperionInGameScreen extends Screen {
               .tooltip(Tooltip.create(text(cat.getTitle())))
               .build();
 
-            this.addRenderableWidget(catBtn);
+            this.addWidgetCompat(catBtn);
         }
 
         // 2. Options Grid in the Center (2 columns of 4 rows = 8 options per page)
@@ -120,7 +120,7 @@ public class HyperionInGameScreen extends Screen {
             int optY = gridTop + row * (optionHeight + rowSpacing);
 
             Button optBtn = createOptionButton(opt, config, optX, optY, optionWidth, optionHeight);
-            this.addRenderableWidget(optBtn);
+            this.addWidgetCompat(optBtn);
         }
 
         // 3. Pagination Controls (if more than 1 page)
@@ -134,12 +134,12 @@ public class HyperionInGameScreen extends Screen {
                 }
             }).bounds(this.width / 2 - 110, navY, 60, 18).build();
             prevBtn.active = (pageIndex > 0);
-            this.addRenderableWidget(prevBtn);
+            this.addWidgetCompat(prevBtn);
 
             Button pageIndicator = Button.builder(text((pageIndex + 1) + " / " + totalPages), btn -> {})
                 .bounds(this.width / 2 - 45, navY, 90, 18).build();
             pageIndicator.active = false;
-            this.addRenderableWidget(pageIndicator);
+            this.addWidgetCompat(pageIndicator);
 
             Button nextBtn = Button.builder(text("Вперед ▶"), btn -> {
                 if (pageIndex < totalPages - 1) {
@@ -148,7 +148,7 @@ public class HyperionInGameScreen extends Screen {
                 }
             }).bounds(this.width / 2 + 50, navY, 60, 18).build();
             nextBtn.active = (pageIndex < totalPages - 1);
-            this.addRenderableWidget(nextBtn);
+            this.addWidgetCompat(nextBtn);
         }
 
         // 4. Bottom Presets Bar (y = this.height - 48)
@@ -169,7 +169,7 @@ public class HyperionInGameScreen extends Screen {
               .tooltip(Tooltip.create(text(preset.getTitle() + "\n" + preset.getDescription())))
               .build();
 
-            this.addRenderableWidget(pBtn);
+            this.addWidgetCompat(pBtn);
         }
 
         // 5. Bottom Action Bar (y = this.height - 26)
@@ -182,7 +182,7 @@ public class HyperionInGameScreen extends Screen {
         }).bounds(this.width / 2 - actionBtnWidth - 8, actionY, actionBtnWidth, 20)
           .tooltip(Tooltip.create(text("Сбросить все параметры к значениям по умолчанию")))
           .build();
-        this.addRenderableWidget(resetBtn);
+        this.addWidgetCompat(resetBtn);
 
         Button doneBtn = Button.builder(text("💾 Сохранить и закрыть"), btn -> {
             model.saveAndApply();
@@ -190,7 +190,7 @@ public class HyperionInGameScreen extends Screen {
         }).bounds(this.width / 2 + 8, actionY, actionBtnWidth + 30, 20)
           .tooltip(Tooltip.create(text("Применить настройки и сохранить в config/hyperion-optimizer.json")))
           .build();
-        this.addRenderableWidget(doneBtn);
+        this.addWidgetCompat(doneBtn);
     }
 
     @SuppressWarnings("unchecked")
@@ -346,6 +346,41 @@ public class HyperionInGameScreen extends Screen {
             }
         } catch (Throwable ignored) {}
         return null;
+    }
+
+    @SuppressWarnings("unchecked")
+    private <T> T addWidgetCompat(T widget) {
+        if (widget == null) return null;
+        try {
+            for (Class<?> c = this.getClass(); c != null && c != Object.class; c = c.getSuperclass()) {
+                for (java.lang.reflect.Method m : c.getDeclaredMethods()) {
+                    if ((m.getName().equals("addRenderableWidget") || m.getName().equals("method_37063") ||
+                         m.getName().equals("addDrawableChild") || m.getName().equals("addWidget") || m.getName().equals("addButton"))
+                            && m.getParameterCount() == 1) {
+                        m.setAccessible(true);
+                        m.invoke(this, widget);
+                        return widget;
+                    }
+                }
+            }
+        } catch (Throwable t) {
+            t.printStackTrace();
+        }
+        return widget;
+    }
+
+    private void clearWidgetsCompat() {
+        try {
+            for (Class<?> c = this.getClass(); c != null && c != Object.class; c = c.getSuperclass()) {
+                for (java.lang.reflect.Method m : c.getDeclaredMethods()) {
+                    if ((m.getName().equals("clearWidgets") || m.getName().equals("method_37067")) && m.getParameterCount() == 0) {
+                        m.setAccessible(true);
+                        m.invoke(this);
+                        return;
+                    }
+                }
+            }
+        } catch (Throwable ignored) {}
     }
 
     @Override
