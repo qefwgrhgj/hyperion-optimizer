@@ -2,6 +2,7 @@ package com.hyperion.optimizer.gui;
 
 import com.hyperion.optimizer.api.HyperionConfig;
 import com.hyperion.optimizer.api.HyperionConfigStorage;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.Tooltip;
 import net.minecraft.client.gui.screens.Screen;
@@ -349,8 +350,10 @@ public class HyperionInGameScreen extends Screen {
 
     @Override
     public void onClose() {
-        if (this.minecraft != null) {
-            setMinecraftScreen(this.minecraft, this.parent);
+        try {
+            setMinecraftScreen(Minecraft.getInstance(), this.parent);
+        } catch (Throwable t) {
+            super.onClose();
         }
     }
 

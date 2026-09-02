@@ -1,10 +1,11 @@
 package net.minecraft.client.gui.screens;
 
+import net.minecraft.client.Minecraft;
 import net.minecraft.network.chat.Component;
 
 public class Screen {
     public Screen parent;
-    public Object minecraft;
+    protected Minecraft minecraft;
     public int width;
     public int height;
 
