@@ -15,7 +15,7 @@ import com.hyperion.optimizer.core.network.PacketFlushConsolidator;
 public class MixinClientPlayNetworkHandler {
     @Inject(method = "handleChunkData", at = @At("HEAD"))
     private void onHandleChunkData(CallbackInfo ci) {
-        onPlayerRespawn();
+        // Zero-overhead chunk packet handler
     }
 
     private static boolean recordPacket(Object channelKey, int maxBatchSize) {

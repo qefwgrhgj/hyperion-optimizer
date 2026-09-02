@@ -24,7 +24,7 @@ public class MixinLevelRenderer {
 
     @Inject(method = "renderLevel", at = @At("RETURN"))
     private void onRenderLevelEnd(CallbackInfo ci) {
-        onFlushTerrainBatch();
+        // Frame rendered
     }
 
     private static boolean shouldRenderChunkSection(float minX, float minY, float minZ, float maxX, float maxY, float maxZ) {

@@ -20,6 +20,7 @@
     "MixinKeyboard",
     "MixinLevelRenderer",
     "MixinLightmapTexture",
+    "MixinLightmapRenderStateExtractor",
     "MixinLivingEntityRenderer",
     "MixinParticleManager",
     "MixinSoundEngine",

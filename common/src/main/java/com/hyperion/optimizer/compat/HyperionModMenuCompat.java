@@ -1,34 +1,28 @@
 package com.hyperion.optimizer.compat;
 
-import com.hyperion.optimizer.gui.HyperionGuiLauncher;
+import com.hyperion.optimizer.gui.HyperionInGameScreen;
 import com.terraformersmc.modmenu.api.ConfigScreenFactory;
 import com.terraformersmc.modmenu.api.ModMenuApi;
-import net.minecraft.client.gui.screens.Screen;
 
-import java.lang.reflect.Constructor;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * 🛠️ Mod Menu Integration for Hyperion Optimizer across Fabric versions.
- *
- * Employs safe reflective construction to prevent classloading leaks or NoClassDefFoundError
- * when running across divergent mappings (Intermediary / Mojang Mappings / Legacy).
+ * Directly provides native in-game config screen for both hyperion_optimizer and hyperion-optimizer.
  */
 public class HyperionModMenuCompat implements ModMenuApi {
 
     @Override
     public ConfigScreenFactory<?> getModConfigScreenFactory() {
-        return (Screen parent) -> {
-            try {
-                Class<?> screenClass = Class.forName("net.minecraft.client.gui.screens.Screen");
-                Class<?> inGameScreenClass = Class.forName("com.hyperion.optimizer.gui.HyperionInGameScreen");
-                Constructor<?> ctor = inGameScreenClass.getConstructor(screenClass);
-                return (Screen) ctor.newInstance(parent);
-            } catch (Throwable t) {
-                // Fallback for legacy environments or alternative mappings:
-                // Opens the robust standalone GUI dashboard and returns parent screen
-                HyperionGuiLauncher.openConfigScreen();
-                return parent;
-            }
-        };
+        return HyperionInGameScreen::new;
+    }
+
+    @Override
+    public Map<String, ConfigScreenFactory<?>> getProvidedConfigScreenFactories() {
+        Map<String, ConfigScreenFactory<?>> factories = new HashMap<>();
+        factories.put("hyperion_optimizer", HyperionInGameScreen::new);
+        factories.put("hyperion-optimizer", HyperionInGameScreen::new);
+        return factories;
     }
 }

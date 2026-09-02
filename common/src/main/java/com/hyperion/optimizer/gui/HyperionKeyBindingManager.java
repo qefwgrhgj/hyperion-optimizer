@@ -112,54 +112,8 @@ public final class HyperionKeyBindingManager {
     }
 
     public void startGlfwKeyPoller() {
-        if (!pollerStarted.compareAndSet(false, true)) return;
-        Thread t = new Thread(() -> {
-            try {
-                // Sleep 2.5 seconds to guarantee Minecraft Blaze3D has initialized GLFW and window
-                Thread.sleep(2500);
-                Class<?> glfwClass = Class.forName("org.lwjgl.glfw.GLFW");
-                java.lang.reflect.Method getKeyMethod = glfwClass.getMethod("glfwGetKey", long.class, int.class);
-
-                boolean wasPressed = false;
-                while (enabled) {
-                    try {
-                        Thread.sleep(50); // 20 Hz check (~0.0001% CPU)
-                        long window = cachedWindowHandle;
-                        if (window == 0L) {
-                            window = findMinecraftWindowHandle();
-                            if (window != 0L) {
-                                cachedWindowHandle = window;
-                            }
-                        }
-                        if (window != 0L) {
-                            int stateRctrl = (int) getKeyMethod.invoke(null, window, GLFW_KEY_RIGHT_CONTROL);
-                            int state0 = (int) getKeyMethod.invoke(null, window, GLFW_KEY_0);
-                            int stateH = (int) getKeyMethod.invoke(null, window, GLFW_KEY_H);
-                            int stateLctrl = (int) getKeyMethod.invoke(null, window, GLFW_KEY_LEFT_CONTROL);
-                            int stateLshift = (int) getKeyMethod.invoke(null, window, 340); // GLFW_KEY_LEFT_SHIFT
-                            int stateF8 = (int) getKeyMethod.invoke(null, window, GLFW_KEY_F8);
-                            int stateF10 = (int) getKeyMethod.invoke(null, window, GLFW_KEY_F10);
-                            int stateRshift = (int) getKeyMethod.invoke(null, window, 344); // GLFW_KEY_RIGHT_SHIFT
-
-                            boolean isRctrl = (stateRctrl == 1);
-                            boolean isCombo = ((state0 == 1 || stateH == 1) && (stateLctrl == 1 || stateLshift == 1));
-                            boolean isFunctionKey = (stateF8 == 1 || stateF10 == 1 || stateRshift == 1);
-
-                            if ((isRctrl || isCombo || isFunctionKey) && !wasPressed) {
-                                wasPressed = true;
-                                triggerOpenScreen();
-                            } else if (!isRctrl && !isCombo && !isFunctionKey) {
-                                wasPressed = false;
-                            }
-                        }
-                    } catch (Throwable t2) {
-                        Thread.sleep(500);
-                    }
-                }
-            } catch (Throwable ignored) {}
-        }, "Hyperion-KeyPoller");
-        t.setDaemon(true);
-        t.start();
+        // Disabled: Key inputs are intercepted directly on the main thread by MixinKeyboard.
+        // Eliminates background GLFW polling contention and prevents FPS drops when stationary.
     }
 
     public void triggerOpenScreen() {

@@ -59,6 +59,11 @@ public class HyperionMixinConfigPlugin implements IMixinConfigPlugin {
             return !isModern26;
         }
 
+        // 4. On modern 1.21.2+ / 26.2, LightmapRenderStateExtractor handles lightmap extraction.
+        if (mixinClassName.endsWith("MixinLightmapRenderStateExtractor")) {
+            return isModern26;
+        }
+
         return true;
     }
 
