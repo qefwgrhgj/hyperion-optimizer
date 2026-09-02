@@ -19,6 +19,7 @@
     "MixinInGameHud",
     "MixinKeyboard",
     "MixinLevelRenderer",
+    "MixinLevelRenderer26",
     "MixinLightmapTexture",
     "MixinLightmapRenderStateExtractor",
     "MixinLivingEntityRenderer",

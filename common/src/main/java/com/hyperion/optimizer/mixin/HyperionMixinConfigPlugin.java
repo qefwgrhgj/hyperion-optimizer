@@ -64,6 +64,11 @@ public class HyperionMixinConfigPlugin implements IMixinConfigPlugin {
             return isModern26;
         }
 
+        // 5. On modern 1.21.2+ / 26.2, LevelRenderer26 handles surface feature culling and anti-stutter.
+        if (mixinClassName.endsWith("MixinLevelRenderer26")) {
+            return isModern26;
+        }
+
         return true;
     }
 
