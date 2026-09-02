@@ -26,14 +26,29 @@ public class HyperionInGameScreen extends Screen {
     private int pageIndex = 0;
     private static final int OPTIONS_PER_PAGE = 8;
 
+    public static Component text(String str) {
+        if (str == null) str = "";
+        try {
+            java.lang.reflect.Method m = Component.class.getMethod("literal", String.class);
+            return (Component) m.invoke(null, str);
+        } catch (Throwable t) {
+            try {
+                java.lang.reflect.Method m = Component.class.getMethod("nullToEmpty", String.class);
+                return (Component) m.invoke(null, str);
+            } catch (Throwable t2) {
+                return null;
+            }
+        }
+    }
+
     public HyperionInGameScreen(Screen parent) {
-        super(Component.literal("⚡ Hyperion Optimizer v1.0.3"));
+        super(text("⚡ Hyperion Optimizer v1.0.3"));
         this.parent = parent;
         this.model = new HyperionScreenModel();
     }
 
     public HyperionInGameScreen(Screen parent, HyperionScreenModel model) {
-        super(Component.literal("⚡ Hyperion Optimizer v1.0.3"));
+        super(text("⚡ Hyperion Optimizer v1.0.3"));
         this.parent = parent;
         this.model = model != null ? model : new HyperionScreenModel();
     }
@@ -66,12 +81,12 @@ public class HyperionInGameScreen extends Screen {
             String prefix = isSelected ? "▶ " : "";
             String tabTitle = prefix + getShortCategoryName(cat);
 
-            Button catBtn = Button.builder(Component.literal(tabTitle), btn -> {
+            Button catBtn = Button.builder(text(tabTitle), btn -> {
                 this.activeCategory = cat;
                 this.pageIndex = 0;
                 rebuildScreen();
             }).bounds(x, y, tabWidth, tabHeight)
-              .tooltip(Tooltip.create(Component.literal(cat.getTitle())))
+              .tooltip(Tooltip.create(text(cat.getTitle())))
               .build();
 
             this.addRenderableWidget(catBtn);
@@ -111,7 +126,7 @@ public class HyperionInGameScreen extends Screen {
         if (totalPages > 1) {
             int navY = gridTop + (4 * (optionHeight + rowSpacing)) + 2;
 
-            Button prevBtn = Button.builder(Component.literal("◀ Назад"), btn -> {
+            Button prevBtn = Button.builder(text("◀ Назад"), btn -> {
                 if (pageIndex > 0) {
                     pageIndex--;
                     rebuildScreen();
@@ -120,12 +135,12 @@ public class HyperionInGameScreen extends Screen {
             prevBtn.active = (pageIndex > 0);
             this.addRenderableWidget(prevBtn);
 
-            Button pageIndicator = Button.builder(Component.literal((pageIndex + 1) + " / " + totalPages), btn -> {})
+            Button pageIndicator = Button.builder(text((pageIndex + 1) + " / " + totalPages), btn -> {})
                 .bounds(this.width / 2 - 45, navY, 90, 18).build();
             pageIndicator.active = false;
             this.addRenderableWidget(pageIndicator);
 
-            Button nextBtn = Button.builder(Component.literal("Вперед ▶"), btn -> {
+            Button nextBtn = Button.builder(text("Вперед ▶"), btn -> {
                 if (pageIndex < totalPages - 1) {
                     pageIndex++;
                     rebuildScreen();
@@ -146,11 +161,11 @@ public class HyperionInGameScreen extends Screen {
             HyperionConfigStorage.Preset preset = presets[i];
             int px = presetStartX + i * (presetBtnWidth + 4);
 
-            Button pBtn = Button.builder(Component.literal(preset.getTitle().split(" ")[0]), btn -> {
+            Button pBtn = Button.builder(text(preset.getTitle().split(" ")[0]), btn -> {
                 model.applyPreset(preset);
                 rebuildScreen();
             }).bounds(px, presetY, presetBtnWidth, 18)
-              .tooltip(Tooltip.create(Component.literal(preset.getTitle() + "\n" + preset.getDescription())))
+              .tooltip(Tooltip.create(text(preset.getTitle() + "\n" + preset.getDescription())))
               .build();
 
             this.addRenderableWidget(pBtn);
@@ -160,19 +175,19 @@ public class HyperionInGameScreen extends Screen {
         int actionY = this.height - 26;
         int actionBtnWidth = 120;
 
-        Button resetBtn = Button.builder(Component.literal("🔄 Сброс"), btn -> {
+        Button resetBtn = Button.builder(text("🔄 Сброс"), btn -> {
             model.resetToDefaults();
             rebuildScreen();
         }).bounds(this.width / 2 - actionBtnWidth - 8, actionY, actionBtnWidth, 20)
-          .tooltip(Tooltip.create(Component.literal("Сбросить все параметры к значениям по умолчанию")))
+          .tooltip(Tooltip.create(text("Сбросить все параметры к значениям по умолчанию")))
           .build();
         this.addRenderableWidget(resetBtn);
 
-        Button doneBtn = Button.builder(Component.literal("💾 Сохранить и закрыть"), btn -> {
+        Button doneBtn = Button.builder(text("💾 Сохранить и закрыть"), btn -> {
             model.saveAndApply();
             onClose();
         }).bounds(this.width / 2 + 8, actionY, actionBtnWidth + 30, 20)
-          .tooltip(Tooltip.create(Component.literal("Применить настройки и сохранить в config/hyperion-optimizer.json")))
+          .tooltip(Tooltip.create(text("Применить настройки и сохранить в config/hyperion-optimizer.json")))
           .build();
         this.addRenderableWidget(doneBtn);
     }
@@ -186,13 +201,13 @@ public class HyperionInGameScreen extends Screen {
             boolean val = bOpt.getValue(config);
             String label = truncate(opt.getName(), 18) + ": " + (val ? "§aВКЛ§r" : "§7ВЫКЛ§r");
 
-            return Button.builder(Component.literal(label), btn -> {
+            return Button.builder(text(label), btn -> {
                 boolean next = !bOpt.getValue(config);
                 bOpt.setValue(config, next);
                 model.markDirty();
-                btn.setMessage(Component.literal(truncate(opt.getName(), 18) + ": " + (next ? "§aВКЛ§r" : "§7ВЫКЛ§r")));
+                btn.setMessage(text(truncate(opt.getName(), 18) + ": " + (next ? "§aВКЛ§r" : "§7ВЫКЛ§r")));
             }).bounds(x, y, w, h)
-              .tooltip(Tooltip.create(Component.literal(tooltipText + "\n[Клик для переключения]")))
+              .tooltip(Tooltip.create(text(tooltipText + "\n[Клик для переключения]")))
               .build();
 
         } else if (opt.getType() == HyperionOption.OptionType.CYCLE) {
@@ -201,7 +216,7 @@ public class HyperionInGameScreen extends Screen {
             String displayVal = getDisplayValue(cOpt, currentVal);
             String label = truncate(opt.getName(), 14) + ": §e" + truncate(displayVal, 10) + "§r";
 
-            return Button.builder(Component.literal(label), btn -> {
+            return Button.builder(text(label), btn -> {
                 String[] vals = cOpt.getPossibleValues();
                 if (vals != null && vals.length > 0) {
                     int currIdx = 0;
@@ -216,10 +231,10 @@ public class HyperionInGameScreen extends Screen {
                     cOpt.setValue(config, vals[nextIdx]);
                     model.markDirty();
                     String nextDisp = getDisplayValue(cOpt, vals[nextIdx]);
-                    btn.setMessage(Component.literal(truncate(opt.getName(), 14) + ": §e" + truncate(nextDisp, 10) + "§r"));
+                    btn.setMessage(text(truncate(opt.getName(), 14) + ": §e" + truncate(nextDisp, 10) + "§r"));
                 }
             }).bounds(x, y, w, h)
-              .tooltip(Tooltip.create(Component.literal(tooltipText + "\n[Клик для смены режима]")))
+              .tooltip(Tooltip.create(text(tooltipText + "\n[Клик для смены режима]")))
               .build();
 
         } else if (opt.getType() == HyperionOption.OptionType.INT_SLIDER) {
@@ -227,7 +242,7 @@ public class HyperionInGameScreen extends Screen {
             int currentVal = iOpt.getValue(config);
             String label = truncate(opt.getName(), 16) + ": §b" + currentVal + "§r";
 
-            return Button.builder(Component.literal(label), btn -> {
+            return Button.builder(text(label), btn -> {
                 int min = (int) iOpt.getMinValue();
                 int max = (int) iOpt.getMaxValue();
                 int step = (int) iOpt.getStep();
@@ -237,9 +252,9 @@ public class HyperionInGameScreen extends Screen {
                 if (nextVal > max) nextVal = min;
                 iOpt.setValue(config, nextVal);
                 model.markDirty();
-                btn.setMessage(Component.literal(truncate(opt.getName(), 16) + ": §b" + nextVal + "§r"));
+                btn.setMessage(text(truncate(opt.getName(), 16) + ": §b" + nextVal + "§r"));
             }).bounds(x, y, w, h)
-              .tooltip(Tooltip.create(Component.literal(tooltipText + "\n[Диапазон: " + (int) iOpt.getMinValue() + ".." + (int) iOpt.getMaxValue() + "]")))
+              .tooltip(Tooltip.create(text(tooltipText + "\n[Диапазон: " + (int) iOpt.getMinValue() + ".." + (int) iOpt.getMaxValue() + "]")))
               .build();
 
         } else {
@@ -247,7 +262,7 @@ public class HyperionInGameScreen extends Screen {
             double currentVal = dOpt.getValue(config);
             String label = truncate(opt.getName(), 16) + ": §b" + String.format("%.2f", currentVal) + "§r";
 
-            return Button.builder(Component.literal(label), btn -> {
+            return Button.builder(text(label), btn -> {
                 double min = dOpt.getMinValue();
                 double max = dOpt.getMaxValue();
                 double step = dOpt.getStep();
@@ -257,9 +272,9 @@ public class HyperionInGameScreen extends Screen {
                 if (nextVal > max + 0.001) nextVal = min;
                 dOpt.setValue(config, nextVal);
                 model.markDirty();
-                btn.setMessage(Component.literal(truncate(opt.getName(), 16) + ": §b" + String.format("%.2f", nextVal) + "§r"));
+                btn.setMessage(text(truncate(opt.getName(), 16) + ": §b" + String.format("%.2f", nextVal) + "§r"));
             }).bounds(x, y, w, h)
-              .tooltip(Tooltip.create(Component.literal(tooltipText + "\n[Диапазон: " + String.format("%.2f", dOpt.getMinValue()) + ".." + String.format("%.2f", dOpt.getMaxValue()) + "]")))
+              .tooltip(Tooltip.create(text(tooltipText + "\n[Диапазон: " + String.format("%.2f", dOpt.getMinValue()) + ".." + String.format("%.2f", dOpt.getMaxValue()) + "]")))
               .build();
         }
     }
